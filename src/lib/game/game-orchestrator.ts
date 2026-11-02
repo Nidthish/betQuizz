@@ -25,16 +25,13 @@ export function scheduleNextStep(gameId: string, delayMs: number) {
   const safeDelay = Math.max(100, Math.min(delayMs, 3600000));
 
   const timer = setTimeout(async () => {
+    gameTimers.delete(gameId);
     try {
       await progressGameIfDue(gameId);
     } catch (err) {
       console.error(`[Game Orchestrator Auto-Tick Error] Game ${gameId}:`, err);
     }
   }, safeDelay);
-
-  if (timer.unref) {
-    timer.unref();
-  }
 
   gameTimers.set(gameId, timer);
 }

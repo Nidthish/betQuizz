@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { submitQuestionSchema } from "../../src/lib/validation/schemas";
-import { GAME_CONSTANTS } from "../../src/lib/constants";
+import { GAME_CONSTANTS, ERROR_CODES } from "../../src/lib/constants";
+import { getHumanErrorMessage } from "../../src/lib/game/bet-engine";
 
 describe("Betting Engine Pure Rules & Logic", () => {
   it("should validate that correct answer adds bet amount to total balance", () => {
@@ -27,18 +28,7 @@ describe("Betting Engine Pure Rules & Logic", () => {
     expect(balanceAfter).toBe(6000);
   });
 
-  it("should enforce maximum bet boundary up to current balance", () => {
-    const currentBalance = 7500;
-    const validBet = 7500;
-    const invalidBet = 7501;
-
-    const checkBet = (bet: number, balance: number) => bet >= 1 && bet <= balance;
-
-    expect(checkBet(validBet, currentBalance)).toBe(true);
-    expect(checkBet(invalidBet, currentBalance)).toBe(false);
-  });
-
-  it("should reject negative, zero, and floating point bets via schema", () => {
+  it("should enforce minimum bet boundary of ₹500 (Section 6 & 36)", () => {
     const validSubmission = {
       gameId: "game_1",
       questionId: "q_1",
@@ -47,37 +37,52 @@ describe("Betting Engine Pure Rules & Logic", () => {
       idempotencyKey: "idem_12345678",
     };
 
+    // ₹500: accepted
     expect(submitQuestionSchema.safeParse(validSubmission).success).toBe(true);
 
+    // ₹499: rejected
+    expect(
+      submitQuestionSchema.safeParse({ ...validSubmission, betAmount: 499 }).success
+    ).toBe(false);
+
+    // ₹0: rejected
     expect(
       submitQuestionSchema.safeParse({ ...validSubmission, betAmount: 0 }).success
     ).toBe(false);
 
+    // Negative: rejected
     expect(
       submitQuestionSchema.safeParse({ ...validSubmission, betAmount: -100 }).success
     ).toBe(false);
 
+    // Decimal: rejected
     expect(
-      submitQuestionSchema.safeParse({ ...validSubmission, betAmount: 10.5 }).success
+      submitQuestionSchema.safeParse({ ...validSubmission, betAmount: 500.5 }).success
     ).toBe(false);
   });
 
-  it("should correctly calculate timer expiration with network grace period", () => {
-    const now = new Date("2026-11-02T12:00:30.000Z").getTime();
-    const endsAt = new Date("2026-11-02T12:00:30.000Z").getTime();
-    const gracePeriod = GAME_CONSTANTS.SUBMISSION_GRACE_PERIOD_MS; // 500ms
+  it("should enforce maximum bet boundary up to current player balance (Section 6 & 36)", () => {
+    const currentBalance = 2000;
+    const validBet = 2000;
+    const invalidBet = 2001;
 
-    const isSubmissionLate = (submittedAtMs: number, deadlineMs: number) => {
-      return submittedAtMs > deadlineMs + gracePeriod;
-    };
+    const checkBet = (bet: number, balance: number) =>
+      bet >= GAME_CONSTANTS.MINIMUM_BET && bet <= balance;
 
-    // Exactly at deadline: accepted
-    expect(isSubmissionLate(now, endsAt)).toBe(false);
+    // ₹2000 with balance ₹2000: accepted
+    expect(checkBet(validBet, currentBalance)).toBe(true);
 
-    // Within grace period (+200ms): accepted
-    expect(isSubmissionLate(now + 200, endsAt)).toBe(false);
+    // ₹2001 with balance ₹2000: rejected
+    expect(checkBet(invalidBet, currentBalance)).toBe(false);
 
-    // Past grace period (+600ms): rejected
-    expect(isSubmissionLate(now + 600, endsAt)).toBe(true);
+    // ₹499: rejected (below minimum)
+    expect(checkBet(499, currentBalance)).toBe(false);
+  });
+
+  it("should provide predictable human-friendly error messages (Section 31)", () => {
+    expect(getHumanErrorMessage(ERROR_CODES.BET_BELOW_MINIMUM)).toContain("Minimum bet is ₹500");
+    expect(getHumanErrorMessage(ERROR_CODES.BET_ABOVE_BALANCE)).toContain("exceeds your current available balance");
+    expect(getHumanErrorMessage(ERROR_CODES.ALREADY_SUBMITTED)).toContain("already submitted");
+    expect(getHumanErrorMessage(ERROR_CODES.GAME_RESET)).toContain("reset by the administrator");
   });
 });

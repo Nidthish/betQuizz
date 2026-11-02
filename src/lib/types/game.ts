@@ -90,13 +90,20 @@ export interface AuthoritativeGameSnapshot {
       isCorrect?: boolean;
       balanceAfter?: number;
     } | null;
+    totalWins?: number;
+    totalLosses?: number;
+    totalWagered?: number;
+    netResult?: number;
+    isCompleted?: boolean;
   } | null;
   leaderboard: LeaderboardEntry[];
   totalPlayers: number;
+  isCompleted?: boolean;
   rules: {
     startingBalance: number;
     refillAmount: number;
     refillFee: number;
+    minBet?: number;
   };
 }
 

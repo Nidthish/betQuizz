@@ -9,6 +9,14 @@ export function formatPoints(points: number): string {
 }
 
 /**
+ * Formats currency amounts with Rupee symbol and commas (e.g. 1500 -> "₹1,500")
+ */
+export function formatCurrency(amount: number): string {
+  if (isNaN(amount)) return "₹0";
+  return `₹${formatPoints(amount)}`;
+}
+
+/**
  * Formats a second duration into MM:SS format (e.g. 30 -> "00:30")
  */
 export function formatCountdown(seconds: number): string {

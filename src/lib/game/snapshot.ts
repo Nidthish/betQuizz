@@ -1,10 +1,12 @@
 import { prisma } from "../db";
 import { AuthoritativeGameSnapshot, AdminGameSnapshot, SanitizedQuestion } from "../types/game";
 import { getGameLeaderboard } from "./leaderboard-engine";
+import { GAME_CONSTANTS } from "../constants";
 
 /**
  * Builds the player-facing authoritative game snapshot.
- * Correct answer is strictly redacted unless question is closed or game is finished.
+ * Synchronized with the active round timer.
+ * Correct answer and outcome are revealed ONLY when question is closed or game is finished.
  */
 export async function getPlayerGameSnapshot(
   gameId: string,
@@ -37,7 +39,8 @@ export async function getPlayerGameSnapshot(
   if (!game) return null;
 
   const totalQuestions = game._count.gameQuestions;
-  const currentIdx = game.currentQuestionIndex;
+  const currentIdx = game.currentQuestionIndex || 1;
+  const isQuestionClosed = game.status === "QUESTION_CLOSED" || game.status === "FINISHED";
 
   let sanitizedQuestion: SanitizedQuestion | null = null;
 
@@ -54,8 +57,6 @@ export async function getPlayerGameSnapshot(
 
     if (activeGQ) {
       const q = activeGQ.question;
-      const isQuestionClosed = game.status === "QUESTION_CLOSED" || game.status === "FINISHED";
-
       sanitizedQuestion = {
         id: q.id,
         questionText: q.questionText,
@@ -63,9 +64,25 @@ export async function getPlayerGameSnapshot(
         timeLimit: q.timeLimit,
         order: activeGQ.order,
         category: q.category,
-        // Only reveal correct answer after question is closed!
+        // Only reveal correct answer and explanation after question countdown has ended!
         correctAnswer: isQuestionClosed ? q.correctAnswer : undefined,
         explanation: isQuestionClosed ? q.explanation : undefined,
+      };
+    }
+  } else if (game.status === "LOBBY" && totalQuestions > 0) {
+    const firstGQ = await prisma.gameQuestion.findFirst({
+      where: { gameId },
+      orderBy: { order: "asc" },
+      include: { question: true },
+    });
+    if (firstGQ) {
+      sanitizedQuestion = {
+        id: firstGQ.question.id,
+        questionText: firstGQ.question.questionText,
+        options: firstGQ.question.options as string[],
+        timeLimit: firstGQ.question.timeLimit,
+        order: firstGQ.order,
+        category: firstGQ.question.category,
       };
     }
   }
@@ -77,14 +94,24 @@ export async function getPlayerGameSnapshot(
       where: { id: gamePlayerId },
       include: {
         submissions: {
-          where: { questionId: game.currentQuestionId ?? "" },
-          take: 1,
+          include: { question: true },
+          orderBy: { submittedAt: "asc" },
         },
       },
     });
 
     if (p) {
-      const currentSub = p.submissions[0];
+      const currentSub = game.currentQuestionId
+        ? p.submissions.find((s) => s.questionId === game.currentQuestionId)
+        : null;
+
+      const totalWins = p.submissions.filter((s) => s.isCorrect).length;
+      const totalLosses = p.submissions.filter((s) => !s.isCorrect && s.selectedAnswer !== "UNANSWERED").length;
+      const totalWagered = p.submissions.reduce((sum, s) => sum + s.betAmount, 0);
+      const netResult = p.balance - game.startingBalance;
+
+      const hasSubmitted = Boolean(currentSub && currentSub.selectedAnswer !== "UNANSWERED");
+
       playerData = {
         id: p.id,
         displayName: p.displayName,
@@ -92,21 +119,21 @@ export async function getPlayerGameSnapshot(
         status: p.status,
         refillCount: p.refillCount,
         totalRefillFees: p.totalRefillFees,
-        submittedCurrentQuestion: Boolean(currentSub && currentSub.selectedAnswer !== "UNANSWERED"),
+        submittedCurrentQuestion: hasSubmitted,
         lastSubmission: currentSub
           ? {
               selectedAnswer: currentSub.selectedAnswer,
               betAmount: currentSub.betAmount,
-              isCorrect:
-                game.status === "QUESTION_CLOSED" || game.status === "FINISHED"
-                  ? currentSub.isCorrect
-                  : undefined,
-              balanceAfter:
-                game.status === "QUESTION_CLOSED" || game.status === "FINISHED"
-                  ? currentSub.balanceAfter
-                  : undefined,
+              // Only reveal win/loss and balance after the round countdown has closed!
+              isCorrect: isQuestionClosed ? currentSub.isCorrect : undefined,
+              balanceAfter: isQuestionClosed ? currentSub.balanceAfter : undefined,
             }
           : null,
+        totalWins,
+        totalLosses,
+        totalWagered,
+        netResult,
+        isCompleted: game.status === "FINISHED",
       };
     }
   }
@@ -138,10 +165,12 @@ export async function getPlayerGameSnapshot(
     player: playerData,
     leaderboard,
     totalPlayers: game._count.players,
+    isCompleted: game.status === "FINISHED",
     rules: {
       startingBalance: game.startingBalance,
       refillAmount: game.refillAmount,
       refillFee: game.refillFee,
+      minBet: GAME_CONSTANTS.MINIMUM_BET,
     },
   };
 }

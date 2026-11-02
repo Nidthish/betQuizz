@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { getPlayerGameSnapshot } from "@/lib/game/snapshot";
 import { getPlayerSession } from "@/lib/auth/session";
-import { progressGameIfDue } from "@/lib/game/game-orchestrator";
 import { generateRequestId } from "@/lib/utils/format";
 import { ERROR_CODES } from "@/lib/constants";
+import { progressGameIfDue } from "@/lib/game/game-orchestrator";
 
 export async function GET(
   req: NextRequest,
@@ -13,14 +14,29 @@ export async function GET(
   const { gameId } = await params;
 
   try {
-    // Authoritatively auto-advance question or review period if time has elapsed
+    // If due, progress question closure or review advance atomically before generating snapshot
     await progressGameIfDue(gameId);
 
     const session = await getPlayerSession();
-    // Resolve gamePlayerId for this game from session participations or query param
+    // Resolve gamePlayerId for this game from query param, session participations, or database guest token lookup
     const queryPlayerId = req.nextUrl.searchParams.get("playerId");
     const sessionPlayerId = session?.gameParticipations?.[gameId];
-    const gamePlayerId = queryPlayerId || sessionPlayerId || null;
+    let gamePlayerId = queryPlayerId || sessionPlayerId || null;
+
+    if (!gamePlayerId && session?.guestId) {
+      const existing = await prisma.gamePlayer.findUnique({
+        where: {
+          gameId_guestSessionToken: {
+            gameId,
+            guestSessionToken: session.guestId,
+          },
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        gamePlayerId = existing.id;
+      }
+    }
 
     const snapshot = await getPlayerGameSnapshot(gameId, gamePlayerId);
 

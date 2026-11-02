@@ -459,38 +459,23 @@ export default function AdminGameControlPage({
             )}
 
             {isLive && (
-              <div className="flex items-center gap-2">
-                <div className="h-10 px-3 rounded-xl bg-emerald-950/80 border border-emerald-700 text-emerald-400 font-mono text-xs font-bold flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span>Auto-Flow Active</span>
-                </div>
-                <button
-                  onClick={() => executeAction("CLOSE_QUESTION")}
-                  disabled={Boolean(actionLoading)}
-                  className="h-10 px-3.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-300 font-black text-xs uppercase tracking-wider transition-colors"
-                  title="Manual override: skip remaining timer and close now"
-                >
-                  Skip Timer ■
-                </button>
-              </div>
+              <button
+                onClick={() => executeAction("CLOSE_QUESTION")}
+                disabled={Boolean(actionLoading)}
+                className="h-10 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider transition-colors"
+              >
+                Close Question ■
+              </button>
             )}
 
-            {isClosed && (
-              <div className="flex items-center gap-2">
-                <div className="h-10 px-3 rounded-xl bg-amber-950/80 border border-amber-600/70 text-amber-400 font-mono text-xs font-bold flex items-center gap-2 animate-pulse">
-                  <span>Advancing in ⏱ {formatCountdown(secondsRemaining)}</span>
-                </div>
-                {snapshot.currentQuestionIndex < snapshot.totalQuestions && (
-                  <button
-                    onClick={() => executeAction("NEXT_QUESTION")}
-                    disabled={Boolean(actionLoading)}
-                    className="h-10 px-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider transition-colors"
-                    title="Manual override: advance immediately without waiting"
-                  >
-                    Next Round →
-                  </button>
-                )}
-              </div>
+            {isClosed && snapshot.currentQuestionIndex < snapshot.totalQuestions && (
+              <button
+                onClick={() => executeAction("NEXT_QUESTION")}
+                disabled={Boolean(actionLoading)}
+                className="h-10 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider transition-colors"
+              >
+                Next Round →
+              </button>
             )}
 
             {isClosed && snapshot.currentQuestionIndex >= snapshot.totalQuestions && !isFinished && (

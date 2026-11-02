@@ -252,6 +252,20 @@ export async function closeActiveQuestion(
 
       for (const player of activePlayers) {
         if (!submittedPlayerIds.has(player.id)) {
+          // Concurrency check: verify if submission was recorded
+          const existing = await tx.questionSubmission.findUnique({
+            where: {
+              gamePlayerId_questionId: {
+                gamePlayerId: player.id,
+                questionId: game.currentQuestionId,
+              },
+            },
+          });
+
+          if (existing) {
+            continue;
+          }
+
           const prevBalance = player.balance;
           const penaltyBalance = Math.max(0, prevBalance - 1000);
 
@@ -264,9 +278,15 @@ export async function closeActiveQuestion(
             },
           });
 
-          // Create penalty QuestionSubmission record
-          const penaltySub = await tx.questionSubmission.create({
-            data: {
+          // Upsert penalty QuestionSubmission record (guarantees P2002 never occurs)
+          const penaltySub = await tx.questionSubmission.upsert({
+            where: {
+              gamePlayerId_questionId: {
+                gamePlayerId: player.id,
+                questionId: game.currentQuestionId,
+              },
+            },
+            create: {
               gameId,
               gamePlayerId: player.id,
               questionId: game.currentQuestionId,
@@ -280,11 +300,13 @@ export async function closeActiveQuestion(
               submittedAt: now,
               processedAt: now,
             },
+            update: {},
           });
 
-          // Create penalty Bet audit record
-          await tx.bet.create({
-            data: {
+          // Upsert penalty Bet audit record
+          await tx.bet.upsert({
+            where: { submissionId: penaltySub.id },
+            create: {
               gameId,
               gamePlayerId: player.id,
               submissionId: penaltySub.id,
@@ -292,6 +314,7 @@ export async function closeActiveQuestion(
               outcome: "LOST",
               netChange: -1000,
             },
+            update: {},
           });
 
           await emitGameEvent(tx, {

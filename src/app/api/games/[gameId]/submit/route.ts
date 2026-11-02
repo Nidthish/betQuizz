@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { submitQuestionSchema } from "@/lib/validation/schemas";
 import { submitQuestionResponse } from "@/lib/game/bet-engine";
 import { getPlayerSession } from "@/lib/auth/session";
@@ -17,9 +18,24 @@ export async function POST(
     const session = await getPlayerSession();
     const body = await req.json();
 
-    // Player ID from session participations or request
+    // Player ID from body, session participations, or database guest token lookup
     const sessionPlayerId = session?.gameParticipations?.[gameId];
-    const gamePlayerId = body.gamePlayerId || sessionPlayerId;
+    let gamePlayerId = body.gamePlayerId || sessionPlayerId;
+
+    if (!gamePlayerId && session?.guestId) {
+      const existing = await prisma.gamePlayer.findUnique({
+        where: {
+          gameId_guestSessionToken: {
+            gameId,
+            guestSessionToken: session.guestId,
+          },
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        gamePlayerId = existing.id;
+      }
+    }
 
     if (!gamePlayerId) {
       return NextResponse.json(
@@ -65,7 +81,7 @@ export async function POST(
       );
     }
 
-    const { questionId, selectedAnswer, betAmount, idempotencyKey } = parsed.data;
+    const { questionId, selectedAnswer, betAmount, idempotencyKey, clientVersion } = parsed.data;
 
     // Execute atomic PostgreSQL transaction
     const result = await submitQuestionResponse({
@@ -75,16 +91,21 @@ export async function POST(
       selectedAnswer,
       betAmount,
       idempotencyKey,
+      clientVersion,
     });
 
     if (!result.success) {
       const status =
         result.code === ERROR_CODES.QUESTION_EXPIRED
           ? 400
-          : result.code === ERROR_CODES.ALREADY_SUBMITTED
+          : result.code === ERROR_CODES.ALREADY_SUBMITTED || result.code === ERROR_CODES.DUPLICATE_BET
           ? 409
-          : result.code === ERROR_CODES.INSUFFICIENT_BALANCE
+          : result.code === ERROR_CODES.INSUFFICIENT_BALANCE || result.code === ERROR_CODES.BET_ABOVE_BALANCE
           ? 400
+          : result.code === ERROR_CODES.BET_BELOW_MINIMUM
+          ? 400
+          : result.code === ERROR_CODES.GAME_RESET
+          ? 410 // 410 Gone / Session Reset
           : 400;
 
       return NextResponse.json(
@@ -99,7 +120,7 @@ export async function POST(
     }
 
     return NextResponse.json({
-      success: true,
+      ...result,
       data: result,
       requestId,
     });

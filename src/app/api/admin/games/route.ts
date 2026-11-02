@@ -107,6 +107,24 @@ export async function POST(req: NextRequest) {
       attempts++;
     }
 
+    // Safely verify whether session.userId exists in database (handles post-wipe stale cookies seamlessly)
+    let creatorId: string | null = null;
+    if (session.userId) {
+      const userExists = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { id: true },
+      });
+      if (userExists) {
+        creatorId = userExists.id;
+      } else {
+        const adminUser = await prisma.user.findFirst({
+          where: { role: "ADMIN" },
+          select: { id: true },
+        });
+        creatorId = adminUser?.id || null;
+      }
+    }
+
     const game = await prisma.game.create({
       data: {
         code,
@@ -115,7 +133,7 @@ export async function POST(req: NextRequest) {
         startingBalance,
         refillAmount,
         refillFee,
-        createdById: session.userId,
+        createdById: creatorId,
       },
     });
 

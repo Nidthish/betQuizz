@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { refillSchema } from "@/lib/validation/schemas";
 import { executePlayerRefill } from "@/lib/game/refill-engine";
 import { getPlayerSession } from "@/lib/auth/session";
@@ -18,7 +19,22 @@ export async function POST(
     const body = await req.json();
 
     const sessionPlayerId = session?.gameParticipations?.[gameId];
-    const gamePlayerId = body.gamePlayerId || sessionPlayerId;
+    let gamePlayerId = body.gamePlayerId || sessionPlayerId;
+
+    if (!gamePlayerId && session?.guestId) {
+      const existing = await prisma.gamePlayer.findUnique({
+        where: {
+          gameId_guestSessionToken: {
+            gameId,
+            guestSessionToken: session.guestId,
+          },
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        gamePlayerId = existing.id;
+      }
+    }
 
     if (!gamePlayerId) {
       return NextResponse.json(

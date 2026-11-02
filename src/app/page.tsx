@@ -51,6 +51,13 @@ export default function LandingPage() {
         return;
       }
 
+      if (typeof window !== "undefined") {
+        localStorage.setItem("quiz_player_name", cleanName);
+        if (data.data?.gamePlayerId) {
+          localStorage.setItem(`quiz_player_id_${code.trim().toUpperCase()}`, data.data.gamePlayerId);
+        }
+      }
+
       router.push(`/game/${code.trim().toUpperCase()}`);
     } catch {
       setError("Network error connecting to game server.");

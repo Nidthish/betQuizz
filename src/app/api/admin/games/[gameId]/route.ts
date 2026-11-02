@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth/session";
 import { getAdminGameSnapshot } from "@/lib/game/snapshot";
-import { progressGameIfDue } from "@/lib/game/game-orchestrator";
 import { generateRequestId } from "@/lib/utils/format";
 import { ERROR_CODES } from "@/lib/constants";
+import { progressGameIfDue } from "@/lib/game/game-orchestrator";
 
 export async function GET(
   req: NextRequest,
@@ -22,7 +22,7 @@ export async function GET(
   const { gameId } = await params;
 
   try {
-    // Authoritatively auto-advance question or review period if time has elapsed
+    // If due, progress question closure or round transition before returning snapshot
     await progressGameIfDue(gameId);
 
     const snapshot = await getAdminGameSnapshot(gameId);

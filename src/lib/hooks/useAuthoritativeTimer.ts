@@ -32,6 +32,8 @@ export function useAuthoritativeTimer(
     const endMs = new Date(endsAt).getTime();
     const totalDuration = Math.max(1000, endMs - startMs);
 
+    let interval: NodeJS.Timeout | null = null;
+
     const updateTimer = () => {
       const now = Date.now();
       const remainingMs = endMs - now;
@@ -40,9 +42,13 @@ export function useAuthoritativeTimer(
         setSecondsRemaining(0);
         setIsExpired(true);
         setPercentage(0);
+        if (interval) {
+          clearInterval(interval);
+          interval = null;
+        }
       } else {
         const secs = Math.ceil(remainingMs / 1000);
-        setSecondsRemaining(secs);
+        setSecondsRemaining((prev) => (prev === secs ? prev : secs));
         setIsExpired(false);
         const pct = Math.max(0, Math.min(100, (remainingMs / totalDuration) * 100));
         setPercentage(pct);
@@ -50,9 +56,13 @@ export function useAuthoritativeTimer(
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 200);
+    interval = setInterval(updateTimer, 200);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
   }, [startedAt, endsAt]);
 
   return {

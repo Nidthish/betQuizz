@@ -23,13 +23,16 @@ export const submitQuestionSchema = z.object({
   betAmount: z
     .number({ invalid_type_error: "Bet amount must be a number" })
     .int("Bet amount must be a whole integer")
-    .positive("Bet amount must be at least 1 point"),
+    .min(500, "Minimum bet is ₹500"),
   idempotencyKey: z.string().trim().min(8, "Idempotency key required"),
+  clientVersion: z.number().int().optional(),
+  gamePlayerId: z.string().optional(),
 });
 
 export const refillSchema = z.object({
   gameId: z.string().min(1, "Game ID is required"),
   idempotencyKey: z.string().trim().min(8, "Idempotency key required"),
+  gamePlayerId: z.string().optional(),
 });
 
 export const createGameSchema = z.object({

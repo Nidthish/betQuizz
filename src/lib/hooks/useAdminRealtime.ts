@@ -18,6 +18,7 @@ export function useAdminRealtime(gameId: string) {
 
   const isMountedRef = useRef(true);
   const isFetchingRef = useRef(false);
+  const initialFetchedRef = useRef(false);
 
   const fetchSnapshot = useCallback(async (isManualRefresh = false) => {
     if (!gameId || isFetchingRef.current) return;
@@ -50,7 +51,10 @@ export function useAdminRealtime(gameId: string) {
   // Strictly fetch ONCE on mount when admin enters the page — ZERO setInterval polling!
   useEffect(() => {
     isMountedRef.current = true;
-    fetchSnapshot();
+    if (!initialFetchedRef.current) {
+      initialFetchedRef.current = true;
+      fetchSnapshot();
+    }
 
     return () => {
       isMountedRef.current = false;

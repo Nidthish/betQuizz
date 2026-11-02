@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { AuthoritativeGameSnapshot } from "../types/game";
+import { SubmitResponseOutput } from "../game/bet-engine";
 import { nanoid } from "nanoid";
 
 export interface UseGameRealtimeReturn {
@@ -10,15 +11,20 @@ export interface UseGameRealtimeReturn {
   isSubmitting: boolean;
   isRefilling: boolean;
   error: string | null;
-  submitBet: (selectedAnswer: string, betAmount: number) => Promise<boolean>;
+  submitBet: (
+    questionId: string,
+    selectedAnswer: string,
+    betAmount: number
+  ) => Promise<SubmitResponseOutput | null>;
   requestRefill: () => Promise<boolean>;
   resync: () => Promise<void>;
+  setSnapshot: React.Dispatch<React.SetStateAction<AuthoritativeGameSnapshot | null>>;
 }
 
 /**
  * Ultra-lean, low-load database snapshot synchronizer.
- * Fetches authoritative game state directly from Neon PostgreSQL without WebSockets.
- * Eliminates aggressive polling loops and stops polling completely when games finish.
+ * Fetches authoritative game state directly from Neon PostgreSQL without polling.
+ * Operates purely on-demand: fetches ONCE on initial join, and on explicit user actions.
  */
 export function useGameRealtime(
   gameId: string,
@@ -66,97 +72,91 @@ export function useGameRealtime(
     }
   }, [gameId, playerId]);
 
-  // Initial load and adaptive gentle cadence
+  // Pure on-demand fetch: strictly ONCE on mount when player enters — ZERO setInterval loops!
   useEffect(() => {
     isMountedRef.current = true;
     fetchSnapshot();
 
-    // If game is FINISHED, stop polling completely
-    if (snapshot?.status === "FINISHED") {
-      return () => {
-        isMountedRef.current = false;
-      };
-    }
-
-    // Adaptive intervals for snappy transitions while protecting Neon DB
-    let intervalMs: number = 3000;
-
-    if (snapshot?.status === "QUESTION_ACTIVE" || snapshot?.status === "FINAL_ROUND") {
-      intervalMs = 2000;
-    } else if (snapshot?.status === "QUESTION_CLOSED") {
-      intervalMs = 1000;
-    } else if (snapshot?.status === "LOBBY" || snapshot?.status === "DRAFT") {
-      intervalMs = 3000;
-    }
-
-    const interval = setInterval(() => {
-      // Pause poll entirely when browser tab is inactive to save Neon DB compute
-      if (document.visibilityState === "visible") {
-        fetchSnapshot();
-      }
-    }, intervalMs);
-
-    // Refresh when tab gains focus
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchSnapshot();
-      }
-    };
-
-    const handleOnline = () => {
-      setConnectionStatus("connected");
-      fetchSnapshot();
-    };
-
-    const handleOffline = () => {
-      setConnectionStatus("offline");
-    };
-
-    window.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
     return () => {
       isMountedRef.current = false;
-      clearInterval(interval);
-      window.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
     };
-  }, [gameId, fetchSnapshot, snapshot?.status]);
+  }, [gameId, fetchSnapshot]);
 
-  // Submit Answer + Bet atomically
-  const submitBet = async (selectedAnswer: string, betAmount: number): Promise<boolean> => {
-    if (!snapshot?.currentQuestion) return false;
-
+  // Submit Answer + Bet atomically in one request (Sections 8 & 25)
+  const submitBet = async (
+    questionId: string,
+    selectedAnswer: string,
+    betAmount: number
+  ): Promise<SubmitResponseOutput | null> => {
     setIsSubmitting(true);
     setError(null);
-    const idempotencyKey = `sub_${gameId}_${snapshot.currentQuestion.id}_${nanoid(12)}`;
+    const idempotencyKey = `bet_${gameId}_${playerId || "p"}_${questionId}_${Date.now()}_${nanoid(8)}`;
 
     try {
       const res = await fetch(`/api/games/${gameId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          questionId: snapshot.currentQuestion.id,
+          gamePlayerId: playerId,
+          questionId,
           selectedAnswer,
           betAmount,
           idempotencyKey,
+          clientVersion: snapshot?.version,
         }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.message || "Failed to submit answer");
-        return false;
+        const errorMsg = data.message || "Failed to submit bet";
+        setError(errorMsg);
+        return {
+          success: false,
+          code: data.code,
+          message: errorMsg,
+        };
       }
 
-      // Immediately pull fresh state to confirm submission
-      await fetchSnapshot();
-      return true;
+      const payload: SubmitResponseOutput = data.data || data;
+
+      // Update local state directly from authoritative response without an extra network request
+      if (isMountedRef.current && snapshot) {
+        setSnapshot((prev) => {
+          if (!prev) return prev;
+          const newBal = payload.balance ?? payload.balanceAfter ?? prev.player?.balance ?? 0;
+          return {
+            ...prev,
+            player: prev.player
+              ? {
+                  ...prev.player,
+                  balance: newBal,
+                  totalWins: (prev.player.totalWins ?? 0) + (payload.isCorrect ? 1 : 0),
+                  totalLosses: (prev.player.totalLosses ?? 0) + (payload.isCorrect ? 0 : 1),
+                  totalWagered: (prev.player.totalWagered ?? 0) + (payload.betAmount ?? 0),
+                  netResult: newBal - prev.rules.startingBalance,
+                  isCompleted: payload.game?.completed ?? false,
+                  lastSubmission: {
+                    selectedAnswer,
+                    betAmount: payload.betAmount ?? betAmount,
+                    isCorrect: payload.isCorrect,
+                    balanceAfter: newBal,
+                  },
+                }
+              : null,
+            isCompleted: payload.game?.completed ?? false,
+          };
+        });
+      }
+
+      return payload;
     } catch {
-      setError("Network timeout submitting answer. Please verify connection.");
-      return false;
+      const netError = "Network error submitting bet. Please check your connection.";
+      setError(netError);
+      return {
+        success: false,
+        code: "NETWORK_ERROR",
+        message: netError,
+      };
     } finally {
       if (isMountedRef.current) setIsSubmitting(false);
     }
@@ -172,7 +172,10 @@ export function useGameRealtime(
       const res = await fetch(`/api/games/${gameId}/refill`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idempotencyKey }),
+        body: JSON.stringify({
+          gamePlayerId: playerId,
+          idempotencyKey,
+        }),
       });
 
       const data = await res.json();
@@ -200,5 +203,6 @@ export function useGameRealtime(
     submitBet,
     requestRefill,
     resync: fetchSnapshot,
+    setSnapshot,
   };
 }
