@@ -41,6 +41,7 @@ export default function GameRoomPage({
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [betAmount, setBetAmount] = useState<number>(GAME_CONSTANTS.MINIMUM_BET);
   const [isGameReset, setIsGameReset] = useState<boolean>(false);
+  const [optimisticSubmitted, setOptimisticSubmitted] = useState<boolean>(false);
 
   // Modals & UI
   const [showBonusModal, setShowBonusModal] = useState<boolean>(false);
@@ -176,11 +177,12 @@ export default function GameRoomPage({
     }
   }, [isExpired, snapshot?.status, resync]);
 
-  // Reset selected answer and balance delta when moving to a new question
+  // Reset selected answer, optimistic state, and balance delta when moving to a new question
   useEffect(() => {
     if (snapshot?.currentQuestion?.id && snapshot.currentQuestion.id !== prevQuestionIdRef.current) {
       prevQuestionIdRef.current = snapshot.currentQuestion.id;
       setSelectedAnswer("");
+      setOptimisticSubmitted(false);
       setBalanceDelta(null);
       if (snapshot.player) {
         prevBalanceRef.current = snapshot.player.balance;
@@ -258,7 +260,7 @@ export default function GameRoomPage({
     }
   }, [snapshot?.player?.balance]);
 
-  // Handle Bet Submission (locks in answer & bet; balance updates when round closes)
+  // Handle Bet Submission with Instant Optimistic UI Lock (0ms latency feel)
   const handleBetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -266,17 +268,24 @@ export default function GameRoomPage({
       !selectedAnswer ||
       isSubmitting ||
       isExpired ||
-      snapshot.player?.submittedCurrentQuestion
+      snapshot.player?.submittedCurrentQuestion ||
+      optimisticSubmitted
     ) {
       return;
     }
 
+    // Lock in UI immediately in 0ms!
+    setOptimisticSubmitted(true);
+
     const response = await submitBet(snapshot.currentQuestion.id, selectedAnswer, betAmount);
 
-    if (response?.code === "GAME_RESET" || response?.code === "UNAUTHORIZED") {
-      setIsGameReset(true);
-      await joinOrCreatePlayer();
-      await resync();
+    if (!response || !response.success) {
+      setOptimisticSubmitted(false);
+      if (response?.code === "GAME_RESET" || response?.code === "UNAUTHORIZED") {
+        setIsGameReset(true);
+        await joinOrCreatePlayer();
+        await resync();
+      }
     }
   };
 
@@ -328,7 +337,7 @@ export default function GameRoomPage({
   const isQuestionClosed = snapshot.status === "QUESTION_CLOSED";
   const isFinished = snapshot.status === "FINISHED";
   const isPaused = snapshot.status === "PAUSED";
-  const hasSubmitted = Boolean(snapshot.player?.submittedCurrentQuestion);
+  const hasSubmitted = Boolean(snapshot.player?.submittedCurrentQuestion || optimisticSubmitted);
   const currentBalance = snapshot.player?.balance ?? 0;
 
   return (

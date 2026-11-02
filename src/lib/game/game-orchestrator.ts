@@ -90,10 +90,10 @@ export async function progressGameIfDue(gameId: string): Promise<boolean> {
     // Phase 1: Active question round
     if (game.status === "QUESTION_ACTIVE" || game.status === "FINAL_ROUND") {
       if (remainingMs <= 0) {
-        // Question timer expired! Close question and start 5-second review intermission
-        const closed = await closeActiveQuestion(gameId, 5);
+        // Question timer expired! Close question and start snappy 3-second review intermission
+        const closed = await closeActiveQuestion(gameId, 3);
         if (closed) {
-          scheduleNextStep(gameId, 5000);
+          scheduleNextStep(gameId, 3000);
           return true;
         }
       } else {

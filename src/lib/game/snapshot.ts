@@ -138,10 +138,12 @@ export async function getPlayerGameSnapshot(
     }
   }
 
-  const leaderboard = await getGameLeaderboard(gameId, 50);
+  // Leaderboard is only needed on the final scoreboard; avoid heavy DB load during active rounds
+  const leaderboard =
+    game.status === "FINISHED" ? await getGameLeaderboard(gameId, 50) : [];
 
   // Mark if player is in the leaderboard
-  if (playerData) {
+  if (playerData && leaderboard.length > 0) {
     for (const entry of leaderboard) {
       if (entry.gamePlayerId === playerData.id) {
         entry.isCurrentPlayer = true;

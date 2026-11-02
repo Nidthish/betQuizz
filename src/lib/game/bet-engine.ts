@@ -79,7 +79,7 @@ export async function submitQuestionResponse(
   // 2. Perform atomic transaction with PostgreSQL row-level locking
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // Step A: Load authoritative game state
+      // Step A: Load authoritative game state & active question in ONE atomic query
       const game = await tx.game.findUnique({
         where: { id: gameId },
         select: {
@@ -88,6 +88,10 @@ export async function submitQuestionResponse(
           currentQuestionId: true,
           currentQuestionEndsAt: true,
           version: true,
+          gameQuestions: {
+            where: { questionId },
+            include: { question: true },
+          },
           _count: {
             select: { gameQuestions: true },
           },
@@ -122,6 +126,10 @@ export async function submitQuestionResponse(
       }
 
       const totalQuestions = game._count.gameQuestions;
+      const gameQuestion = game.gameQuestions[0];
+      if (!gameQuestion) {
+        throw new Error(ERROR_CODES.QUESTION_NOT_ACTIVE);
+      }
 
       // Step C: Lock player row and read authoritative balance (Row-level lock using SELECT FOR UPDATE)
       const playerRows = await tx.$queryRaw<
@@ -149,79 +157,14 @@ export async function submitQuestionResponse(
         throw new Error(ERROR_CODES.BET_ABOVE_BALANCE);
       }
 
-      // Step E: Check if player already submitted for this question
-      const existingSubmission = await tx.questionSubmission.findUnique({
-        where: {
-          gamePlayerId_questionId: {
-            gamePlayerId,
-            questionId,
-          },
-        },
-        include: {
-          bet: true,
-          question: true,
-        },
-      });
-
-      if (existingSubmission) {
-        return {
-          success: true,
-          submissionId: existingSubmission.id,
-          questionId,
-          betAmount: existingSubmission.betAmount,
-          balance: currentBalance,
-          balanceBefore: existingSubmission.balanceBefore,
-          betLocked: true,
-          bet: {
-            id: existingSubmission.bet?.id || `bet_${existingSubmission.id}`,
-            amount: existingSubmission.betAmount,
-            status: "locked",
-          },
-          player: {
-            id: player.id,
-            displayName: player.displayName,
-            balance: currentBalance,
-          },
-          game: {
-            status: game.status,
-            completed: false,
-            currentQuestionIndex: totalQuestions,
-            totalQuestions,
-          },
-        } as SubmitResponseOutput;
-      }
-
-      // Step F: Validate question in this game
-      const gameQuestion = await tx.gameQuestion.findUnique({
-        where: {
-          gameId_questionId: {
-            gameId,
-            questionId,
-          },
-        },
-        include: { question: true },
-      });
-
-      if (!gameQuestion) {
-        throw new Error(ERROR_CODES.QUESTION_NOT_ACTIVE);
-      }
-
       const q = gameQuestion.question;
       const isCorrect = q.correctAnswer.trim().toLowerCase() === selectedAnswer.trim().toLowerCase();
 
-      // Step G: Calculate potential outcome
+      // Step E: Calculate potential outcome (deferred until round timer ends)
       const balanceBefore = currentBalance;
       const balanceAfter = isCorrect ? balanceBefore + betAmount : Math.max(0, balanceBefore - betAmount);
 
-      // Step H: Update lastSeenAt (balance remains intact until timer closes round)
-      await tx.gamePlayer.update({
-        where: { id: gamePlayerId },
-        data: {
-          lastSeenAt: now,
-        },
-      });
-
-      // Step I: Upsert QuestionSubmission record to guarantee P2002 never occurs
+      // Step F: Upsert QuestionSubmission record atomically (guarantees idempotency & P2002 prevention)
       const submission = await tx.questionSubmission.upsert({
         where: {
           gamePlayerId_questionId: {
