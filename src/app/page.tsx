@@ -210,13 +210,13 @@ export default function LandingPage() {
                     maxLength={10}
                     autoFocus
                     required
-                    className="w-full h-13 sm:h-14 px-4 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/20 font-mono text-center text-xl sm:text-2xl tracking-widest font-black text-[#191820] uppercase placeholder:text-[#A09EB1] outline-none transition-all"
+                    className="w-full h-[50px] sm:h-[54px] px-4 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/20 font-mono text-center text-xl sm:text-2xl tracking-widest font-black text-[#191820] uppercase placeholder:text-[#A09EB1] outline-none transition-all"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full h-12 sm:h-14 rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full h-[50px] sm:h-[54px] rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
                 >
                   <span>CONTINUE</span>
                   <ArrowRight className="w-4 h-4" />
@@ -237,14 +237,14 @@ export default function LandingPage() {
                     maxLength={25}
                     autoFocus
                     required
-                    className="w-full h-13 sm:h-14 px-4 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/20 text-sm sm:text-base font-bold text-[#191820] placeholder:text-[#A09EB1] outline-none transition-all"
+                    className="w-full h-[50px] sm:h-[54px] px-4 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/20 text-sm sm:text-base font-bold text-[#191820] placeholder:text-[#A09EB1] outline-none transition-all"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 sm:h-14 rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] disabled:opacity-50 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full h-[50px] sm:h-[54px] rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] disabled:opacity-50 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

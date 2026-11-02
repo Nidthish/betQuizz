@@ -570,13 +570,13 @@ export default function GameRoomPage({
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
                     maxLength={25}
-                    className="px-3 py-1.5 text-xs rounded-xl bg-[#F4F1FF] border border-[#6C5CE7] text-[#191820] font-bold outline-none"
+                    className="h-[50px] px-4 text-sm rounded-2xl bg-[#F4F1FF] border border-[#6C5CE7] text-[#191820] font-bold outline-none"
                     placeholder="New nickname"
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="px-3 py-1.5 rounded-xl bg-[#FF7417] text-white text-xs font-bold"
+                    className="h-[50px] px-5 rounded-2xl bg-[#FF7417] text-white text-xs font-black uppercase tracking-wider"
                   >
                     Save
                   </button>
