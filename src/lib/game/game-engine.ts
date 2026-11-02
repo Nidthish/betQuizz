@@ -7,7 +7,7 @@ import { getGameLeaderboard } from "./leaderboard-engine";
  * Transitions game from DRAFT to LOBBY so players can join
  */
 export async function openGameLobby(gameId: string): Promise<boolean> {
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx: any) => {
     const game = await tx.game.findUnique({
       where: { id: gameId },
       select: { id: true, status: true },
@@ -40,7 +40,7 @@ export async function openGameLobby(gameId: string): Promise<boolean> {
  */
 export async function startGame(gameId: string): Promise<{ success: boolean; code?: string }> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: any) => {
       // Step A: Load game with lock
       const gameRows = await tx.$queryRaw<
         Array<{
@@ -149,7 +149,7 @@ export async function closeActiveQuestion(
   gameId: string,
   reviewDurationSecs: number = 3
 ): Promise<boolean> {
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx: any) => {
     const game = await tx.game.findUnique({
       where: { id: gameId },
       select: {
@@ -203,7 +203,7 @@ export async function closeActiveQuestion(
     if (submissions.length > 0) {
       // Parallel execution for submitted player balance updates
       await Promise.all(
-        submissions.map((sub) => {
+        submissions.map((sub: any) => {
           submittedPlayerIds.add(sub.gamePlayerId);
           return tx.gamePlayer.update({
             where: { id: sub.gamePlayerId },
@@ -217,7 +217,7 @@ export async function closeActiveQuestion(
 
       // Fast bulk insert of Bets
       await tx.bet.createMany({
-        data: submissions.map((sub) => ({
+        data: submissions.map((sub: any) => ({
           gameId,
           gamePlayerId: sub.gamePlayerId,
           submissionId: sub.id,
@@ -254,7 +254,7 @@ export async function closeActiveQuestion(
         `;
 
         // Bulk insert penalty submissions
-        const penaltySubData = activeUnanswered.map((p) => ({
+        const penaltySubData = activeUnanswered.map((p: any) => ({
           gameId,
           gamePlayerId: p.id,
           questionId: game.currentQuestionId!,
@@ -309,7 +309,7 @@ export async function advanceToNextQuestion(
   gameId: string
 ): Promise<{ success: boolean; isLastQuestion?: boolean; code?: string }> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: any) => {
       const gameRows = await tx.$queryRaw<
         Array<{
           id: string;
@@ -391,7 +391,7 @@ export async function advanceToNextQuestion(
  */
 export async function finishGame(gameId: string): Promise<{ success: boolean; code?: string }> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: any) => {
       const gameRows = await tx.$queryRaw<
         Array<{
           id: string;
@@ -488,7 +488,7 @@ export async function resetGame(
   gameId: string
 ): Promise<{ success: boolean; code?: string; message?: string }> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: any) => {
       const game = await tx.game.findUnique({
         where: { id: gameId },
         select: { id: true, code: true, title: true },

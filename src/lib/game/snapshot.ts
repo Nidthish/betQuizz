@@ -102,12 +102,12 @@ export async function getPlayerGameSnapshot(
 
     if (p) {
       const currentSub = game.currentQuestionId
-        ? p.submissions.find((s) => s.questionId === game.currentQuestionId)
+        ? p.submissions.find((s: any) => s.questionId === game.currentQuestionId)
         : null;
 
-      const totalWins = p.submissions.filter((s) => s.isCorrect).length;
-      const totalLosses = p.submissions.filter((s) => !s.isCorrect && s.selectedAnswer !== "UNANSWERED").length;
-      const totalWagered = p.submissions.reduce((sum, s) => sum + s.betAmount, 0);
+      const totalWins = p.submissions.filter((s: any) => s.isCorrect).length;
+      const totalLosses = p.submissions.filter((s: any) => !s.isCorrect && s.selectedAnswer !== "UNANSWERED").length;
+      const totalWagered = p.submissions.reduce((sum: number, s: any) => sum + s.betAmount, 0);
       const netResult = p.balance - game.startingBalance;
 
       const hasSubmitted = Boolean(currentSub && currentSub.selectedAnswer !== "UNANSWERED");
@@ -210,7 +210,7 @@ export async function getAdminGameSnapshot(gameId: string): Promise<AdminGameSna
   let activeQuestion: AdminGameSnapshot["currentQuestion"] = null;
 
   if (game.currentQuestionId) {
-    const activeGQ = game.gameQuestions.find((gq) => gq.questionId === game.currentQuestionId);
+    const activeGQ = game.gameQuestions.find((gq: any) => gq.questionId === game.currentQuestionId);
     if (activeGQ) {
       const q = activeGQ.question;
       activeQuestion = {
@@ -228,10 +228,10 @@ export async function getAdminGameSnapshot(gameId: string): Promise<AdminGameSna
 
   const leaderboard = await getGameLeaderboard(gameId, 100);
   const totalPlayers = game.players.length;
-  const activePlayers = game.players.filter((p) => p.status === "ACTIVE").length;
+  const activePlayers = game.players.filter((p: any) => p.status === "ACTIVE").length;
   const unsubmittedCount = Math.max(0, activePlayers - submissionCount);
 
-  const questionsList = game.gameQuestions.map((gq) => ({
+  const questionsList = game.gameQuestions.map((gq: any) => ({
     id: gq.question.id,
     gameQuestionId: gq.id,
     order: gq.order,

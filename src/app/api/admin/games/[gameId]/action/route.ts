@@ -138,7 +138,7 @@ export async function POST(
 
       case "PAUSE_GAME": {
         cancelGameTimer(gameId);
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
           await tx.game.update({
             where: { id: gameId },
             data: { status: "PAUSED", version: { increment: 1 } },
@@ -153,7 +153,7 @@ export async function POST(
       }
 
       case "RESUME_GAME": {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
           await tx.game.update({
             where: { id: gameId },
             data: { status: "QUESTION_ACTIVE", version: { increment: 1 } },

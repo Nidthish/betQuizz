@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { WifiOff, RefreshCw } from "lucide-react";
 
 interface ConnectionBannerProps {
   status: "connecting" | "connected" | "reconnecting" | "offline";
@@ -8,23 +9,23 @@ interface ConnectionBannerProps {
 }
 
 export const ConnectionBanner: React.FC<ConnectionBannerProps> = ({ status, onResync }) => {
-  // Only alert if device is physically offline
   if (status !== "offline") return null;
 
   return (
     <div
       role="status"
       aria-live="polite"
-      className="w-full py-1.5 px-4 bg-rose-950 text-rose-200 border-b border-rose-800 text-xs text-center font-medium flex items-center justify-center gap-2"
+      className="w-full py-2 px-3 sm:px-4 bg-[#FDEEEC] text-[#EF5350] border-b border-[#FCA5A5] text-xs text-center font-bold flex items-center justify-center gap-2 animate-fade-in"
     >
-      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-      <span>No internet connection. Waiting for network...</span>
+      <WifiOff className="w-3.5 h-3.5 shrink-0" />
+      <span className="truncate">No internet connection. Waiting for network...</span>
       {onResync && (
         <button
           onClick={onResync}
-          className="ml-2 px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold"
+          className="ml-2 px-2.5 py-0.5 rounded-full bg-[#EF5350] hover:bg-[#DC2626] text-white text-[11px] font-bold transition-colors inline-flex items-center gap-1 shrink-0"
         >
-          Retry
+          <RefreshCw className="w-3 h-3" />
+          <span>Retry</span>
         </button>
       )}
     </div>

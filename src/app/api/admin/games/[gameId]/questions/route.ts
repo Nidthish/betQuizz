@@ -87,7 +87,7 @@ export async function POST(
 
     // Link to GameQuestion in bulk
     await prisma.gameQuestion.createMany({
-      data: createdQuestions.map((q, idx) => ({
+      data: createdQuestions.map((q: any, idx: number) => ({
         gameId,
         questionId: q.id,
         order: startingOrder + idx,

@@ -78,7 +78,7 @@ export async function submitQuestionResponse(
 
   // 2. Perform atomic transaction with PostgreSQL row-level locking
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Step A: Load authoritative game state & active question in ONE atomic query
       const game = await tx.game.findUnique({
         where: { id: gameId },

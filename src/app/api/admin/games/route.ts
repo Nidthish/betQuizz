@@ -33,8 +33,8 @@ export async function GET() {
       },
     });
 
-    const formatted = games.map((g) => {
-      const activePlayers = g.players.filter((p) => p.status === "ACTIVE").length;
+    const formatted = games.map((g: any) => {
+      const activePlayers = g.players.filter((p: any) => p.status === "ACTIVE").length;
       return {
         id: g.id,
         code: g.code,

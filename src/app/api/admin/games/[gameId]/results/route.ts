@@ -61,7 +61,7 @@ export async function GET(
         code: game.code,
         title: game.title,
         status: game.status,
-        results: game.results.map((r) => ({
+        results: game.results.map((r: any) => ({
           rank: r.finalRank,
           displayName: r.gamePlayer.displayName,
           finalBalance: r.finalBalance,
@@ -71,12 +71,12 @@ export async function GET(
           totalRefills: r.totalRefills,
           totalFees: r.totalFees,
         })),
-        playerDetails: game.players.map((p) => ({
+        playerDetails: game.players.map((p: any) => ({
           id: p.id,
           name: p.displayName,
           balance: p.balance,
           refillCount: p.refillCount,
-          submissions: p.submissions.map((s) => ({
+          submissions: p.submissions.map((s: any) => ({
             question: s.question.questionText,
             selected: s.selectedAnswer,
             correctAnswer: s.question.correctAnswer,

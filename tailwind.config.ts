@@ -9,6 +9,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        qb: {
+          purple: "#6C5CE7",
+          "purple-hover": "#5b4cdb",
+          "purple-light": "#E9E5FF",
+          "purple-soft": "#F4F1FF",
+          orange: "#FF7417",
+          "orange-hover": "#e6640e",
+          "orange-light": "#FFF3E8",
+          warm: "#F7F6F2",
+          dark: "#191820",
+          gray: "#6B6A78",
+          "gray-light": "#A09EB1",
+          border: "#EAE7F2",
+          green: "#22B978",
+          "green-light": "#EAF9F2",
+          red: "#EF5350",
+          "red-light": "#FDEEEC",
+        },
         brand: {
           50: "#f5f3ff",
           100: "#ede9fe",
@@ -34,7 +52,7 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-inter)", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
         display: ["var(--font-display)", "system-ui", "sans-serif"],
       },
       animation: {

@@ -37,7 +37,7 @@ export async function GET() {
       },
     });
 
-    const games = participations.map((p) => ({
+    const games = participations.map((p: any) => ({
       gamePlayerId: p.id,
       gameId: p.game.id,
       gameCode: p.game.code,

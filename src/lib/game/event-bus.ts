@@ -14,7 +14,7 @@ export interface AuditGameEvent {
  * Advances the game version in the database transaction.
  */
 export async function emitGameEvent(
-  tx: Prisma.TransactionClient,
+  tx: any,
   params: {
     gameId: string;
     gamePlayerId?: string | null;

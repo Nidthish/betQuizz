@@ -16,7 +16,7 @@ const memoryIdempotencyCache = new Map<string, { data: unknown; expiresAt: numbe
 export async function checkIdempotency<T>(
   key: string,
   scope: string,
-  tx?: Prisma.TransactionClient
+  tx?: any
 ): Promise<IdempotencyResult<T>> {
   const cacheKey = `${scope}:${key}`;
   const now = Date.now();
@@ -52,7 +52,7 @@ export async function checkIdempotency<T>(
  * Stores an idempotency record alongside the transaction result.
  */
 export async function saveIdempotency(
-  tx: Prisma.TransactionClient,
+  tx: any,
   key: string,
   scope: string,
   responsePayload: Record<string, unknown>,

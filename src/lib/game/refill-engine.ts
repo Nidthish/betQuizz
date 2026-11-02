@@ -37,7 +37,7 @@ export async function executePlayerRefill(input: RefillInput): Promise<RefillOut
   }
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Step A: Check game configuration
       const game = await tx.game.findUnique({
         where: { id: gameId },

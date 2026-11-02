@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       });
     } else {
       // New participation creation
-      gamePlayer = await prisma.$transaction(async (tx) => {
+      gamePlayer = await prisma.$transaction(async (tx: any) => {
         const newPlayer = await tx.gamePlayer.create({
           data: {
             gameId: game.id,

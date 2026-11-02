@@ -1,6 +1,21 @@
 import { prisma } from "../db";
 import { LeaderboardEntry } from "../types/game";
 
+interface SubmissionItem {
+  isCorrect: boolean;
+  submittedAt: Date;
+}
+
+interface PlayerRecord {
+  id: string;
+  displayName: string;
+  balance: number;
+  refillCount: number;
+  totalRefillFees: number;
+  joinedAt: Date;
+  submissions: SubmissionItem[];
+}
+
 /**
  * Computes the authoritative server-side leaderboard for a specific game.
  * Uses deterministic tie-breaking:
@@ -32,12 +47,12 @@ export async function getGameLeaderboard(
     },
   });
 
-  const formatted = players.map((p) => {
-    const totalCorrect = p.submissions.filter((s) => s.isCorrect).length;
-    const totalWrong = p.submissions.filter((s) => !s.isCorrect).length;
+  const formatted = (players as unknown as PlayerRecord[]).map((p: PlayerRecord) => {
+    const totalCorrect = p.submissions.filter((s: SubmissionItem) => s.isCorrect).length;
+    const totalWrong = p.submissions.filter((s: SubmissionItem) => !s.isCorrect).length;
     const netScore = p.balance - p.totalRefillFees;
     const latestSubmissionTime = p.submissions.length > 0
-      ? Math.max(...p.submissions.map((s) => s.submittedAt.getTime()))
+      ? Math.max(...p.submissions.map((s: SubmissionItem) => s.submittedAt.getTime()))
       : p.joinedAt.getTime();
 
     return {
