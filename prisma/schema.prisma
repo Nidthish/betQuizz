@@ -1,0 +1,285 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  PLAYER
+}
+
+enum GameStatus {
+  DRAFT
+  LOBBY
+  QUESTION_ACTIVE
+  QUESTION_CLOSED
+  FINAL_ROUND
+  FINISHED
+  PAUSED
+  CANCELLED
+}
+
+enum PlayerStatus {
+  JOINED
+  WAITING
+  ACTIVE
+  DISCONNECTED
+  RECONNECTED
+  FINISHED
+  REMOVED
+}
+
+enum SubmissionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum BetOutcome {
+  WON
+  LOST
+  CANCELLED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String?
+  role         UserRole     @default(PLAYER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  createdGames Game[]       @relation("CreatedBy")
+  gamePlayers  GamePlayer[]
+
+  @@map("users")
+}
+
+model Game {
+  id                       String               @id @default(cuid())
+  code                     String               @unique
+  title                    String
+  status                   GameStatus           @default(DRAFT)
+  startingBalance          Int                  @default(10000)
+  refillAmount             Int                  @default(10000)
+  refillFee                Int                  @default(1000)
+  currentQuestionId        String?
+  currentQuestionIndex     Int                  @default(0)
+  currentQuestionStartedAt DateTime?
+  currentQuestionEndsAt   DateTime?
+  startedAt                DateTime?
+  endedAt                  DateTime?
+  version                  Int                  @default(1)
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+
+  createdById              String?
+  createdBy                User?                @relation("CreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  gameQuestions            GameQuestion[]
+  players                  GamePlayer[]
+  submissions              QuestionSubmission[]
+  bets                     Bet[]
+  refills                  Refill[]
+  results                  GameResult[]
+  events                   GameEvent[]
+
+  @@index([status])
+  @@index([code])
+  @@index([createdAt])
+  @@map("games")
+}
+
+model Question {
+  id            String               @id @default(cuid())
+  questionText  String
+  options       Json                 // e.g. ["Paris", "Berlin", "London", "Madrid"]
+  correctAnswer String
+  explanation   String?
+  timeLimit     Int                  @default(30)
+  category      String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  gameQuestions GameQuestion[]
+  submissions   QuestionSubmission[]
+
+  @@map("questions")
+}
+
+model GameQuestion {
+  id         String   @id @default(cuid())
+  gameId     String
+  questionId String
+  order      Int
+  createdAt  DateTime @default(now())
+
+  game       Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([gameId, order])
+  @@unique([gameId, questionId])
+  @@index([gameId, order])
+  @@map("game_questions")
+}
+
+model GamePlayer {
+  id                 String               @id @default(cuid())
+  gameId             String
+  userId             String?
+  guestSessionToken  String?              // Unique guest token to prevent identity theft
+  displayName        String
+  balance            Int                  @default(10000)
+  status             PlayerStatus         @default(JOINED)
+  joinedAt           DateTime             @default(now())
+  lastSeenAt         DateTime             @default(now())
+  refillCount        Int                  @default(0)
+  totalRefillAmount  Int                  @default(0)
+  totalRefillFees    Int                  @default(0)
+  version            Int                  @default(1)
+
+  game               Game                 @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user               User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  submissions        QuestionSubmission[]
+  bets               Bet[]
+  refills            Refill[]
+  result             GameResult?
+  events             GameEvent[]
+
+  @@unique([gameId, guestSessionToken])
+  @@index([gameId, status])
+  @@index([gameId, balance])
+  @@map("game_players")
+}
+
+model QuestionSubmission {
+  id             String           @id @default(cuid())
+  gameId         String
+  gamePlayerId   String
+  questionId     String
+  selectedAnswer String
+  betAmount      Int
+  isCorrect      Boolean
+  balanceBefore  Int
+  balanceAfter   Int
+  status         SubmissionStatus @default(ACCEPTED)
+  idempotencyKey String?
+  submittedAt    DateTime         @default(now())
+  processedAt    DateTime         @default(now())
+
+  game           Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gamePlayer     GamePlayer       @relation(fields: [gamePlayerId], references: [id], onDelete: Cascade)
+  question       Question         @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  bet            Bet?
+
+  // Guarantees at database level that a player can ONLY submit ONCE per question in a game!
+  @@unique([gamePlayerId, questionId])
+  @@index([gameId, questionId])
+  @@index([gameId, submittedAt])
+  @@map("question_submissions")
+}
+
+model Bet {
+  id           String             @id @default(cuid())
+  gameId       String
+  gamePlayerId String
+  submissionId String             @unique
+  amount       Int
+  outcome      BetOutcome
+  netChange    Int
+  createdAt    DateTime           @default(now())
+
+  game         Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gamePlayer   GamePlayer         @relation(fields: [gamePlayerId], references: [id], onDelete: Cascade)
+  submission   QuestionSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, gamePlayerId])
+  @@map("bets")
+}
+
+model Refill {
+  id             String     @id @default(cuid())
+  gameId         String
+  gamePlayerId   String
+  amount         Int
+  fee            Int
+  balanceBefore  Int
+  balanceAfter   Int
+  idempotencyKey String?
+  createdAt      DateTime   @default(now())
+
+  game           Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gamePlayer     GamePlayer @relation(fields: [gamePlayerId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, gamePlayerId])
+  @@map("refills")
+}
+
+model GameResult {
+  id           String     @id @default(cuid())
+  gameId       String
+  gamePlayerId String     @unique
+  finalRank    Int
+  finalBalance Int
+  totalCorrect Int        @default(0)
+  totalWrong   Int        @default(0)
+  totalRefills Int        @default(0)
+  totalFees    Int        @default(0)
+  finalScore   Int        // finalBalance - totalFees
+  calculatedAt DateTime   @default(now())
+
+  game         Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gamePlayer   GamePlayer @relation(fields: [gamePlayerId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, finalRank])
+  @@index([gameId, finalScore])
+  @@map("game_results")
+}
+
+model GameEvent {
+  id             String      @id @default(cuid())
+  gameId         String
+  gamePlayerId   String?
+  eventType      String
+  sequenceNumber Int
+  payload        Json
+  createdAt      DateTime    @default(now())
+
+  game           Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gamePlayer     GamePlayer? @relation(fields: [gamePlayerId], references: [id], onDelete: SetNull)
+
+  @@unique([gameId, sequenceNumber])
+  @@index([gameId, sequenceNumber])
+  @@index([gameId, createdAt])
+  @@map("game_events")
+}
+
+model IdempotencyKey {
+  id              String   @id @default(cuid())
+  key             String
+  scope           String
+  responsePayload Json
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+
+  @@unique([key, scope])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+model RateLimitRecord {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  count       Int      @default(1)
+  windowStart DateTime @default(now())
+
+  @@index([key, windowStart])
+  @@map("rate_limit_records")
+}
