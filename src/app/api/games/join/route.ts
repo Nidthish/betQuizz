@@ -7,6 +7,7 @@ import { emitGameEvent } from "@/lib/game/event-bus";
 import { ERROR_CODES } from "@/lib/constants";
 import { generateRequestId, sanitizeText } from "@/lib/utils/format";
 import { nanoid } from "nanoid";
+import { isValidMascotId, DEFAULT_MASCOT_ID } from "@/lib/constants/mascots";
 
 export async function POST(req: NextRequest) {
   const requestId = generateRequestId();
@@ -42,8 +43,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { code, displayName } = parsed.data;
+    const { code, displayName, avatarId } = parsed.data;
     const cleanName = sanitizeText(displayName, 25);
+    const cleanAvatarId = avatarId && isValidMascotId(avatarId) ? avatarId : DEFAULT_MASCOT_ID;
 
     // Look up game by authoritative unique code
     const game = await prisma.game.findUnique({
@@ -100,12 +102,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (gamePlayer) {
-      // Re-joining existing game participation: update last seen and display name if changed
+      // Re-joining existing game participation: update last seen, display name, and avatar if provided
       gamePlayer = await prisma.gamePlayer.update({
         where: { id: gamePlayer.id },
         data: {
           lastSeenAt: new Date(),
           status: gamePlayer.status === "DISCONNECTED" ? "RECONNECTED" : gamePlayer.status,
+          ...(avatarId ? { avatarId: cleanAvatarId } : {}),
         },
       });
     } else {
@@ -116,6 +119,7 @@ export async function POST(req: NextRequest) {
             gameId: game.id,
             guestSessionToken: guestId,
             displayName: cleanName,
+            avatarId: cleanAvatarId,
             balance: game.startingBalance,
             status: game.status === "DRAFT" || game.status === "LOBBY" ? "WAITING" : "ACTIVE",
           },
@@ -129,6 +133,7 @@ export async function POST(req: NextRequest) {
           payload: {
             playerId: newPlayer.id,
             displayName: cleanName,
+            avatarId: cleanAvatarId,
           },
         });
 
@@ -155,6 +160,7 @@ export async function POST(req: NextRequest) {
         gameStatus: game.status,
         gamePlayerId: gamePlayer.id,
         displayName: gamePlayer.displayName,
+        avatarId: gamePlayer.avatarId || cleanAvatarId,
         balance: gamePlayer.balance,
       },
       requestId,

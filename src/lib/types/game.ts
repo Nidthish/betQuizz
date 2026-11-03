@@ -43,6 +43,7 @@ export interface SanitizedQuestion {
 export interface PlayerPublicState {
   id: string;
   displayName: string;
+  avatarId?: string;
   balance: number;
   status: PlayerStatus;
   refillCount: number;
@@ -54,6 +55,7 @@ export interface LeaderboardEntry {
   rank: number;
   gamePlayerId: string;
   displayName: string;
+  avatarId?: string;
   balance: number;
   totalCorrect: number;
   totalWrong: number;
@@ -61,6 +63,12 @@ export interface LeaderboardEntry {
   refillFees: number;
   netScore: number; // balance - refillFees
   isCurrentPlayer?: boolean;
+}
+
+export interface JoinedPlayerSummary {
+  id: string;
+  displayName: string;
+  avatarId?: string;
 }
 
 export interface AuthoritativeGameSnapshot {
@@ -79,6 +87,7 @@ export interface AuthoritativeGameSnapshot {
   player: {
     id: string;
     displayName: string;
+    avatarId?: string;
     balance: number;
     status: PlayerStatus;
     refillCount: number;
@@ -97,6 +106,7 @@ export interface AuthoritativeGameSnapshot {
     isCompleted?: boolean;
   } | null;
   leaderboard: LeaderboardEntry[];
+  joinedPlayers?: JoinedPlayerSummary[];
   totalPlayers: number;
   isCompleted?: boolean;
   rules: {

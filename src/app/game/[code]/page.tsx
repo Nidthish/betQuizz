@@ -7,6 +7,7 @@ import { ConnectionBanner } from "@/components/common/ConnectionBanner";
 import { BonusPointsModal } from "@/components/common/BonusPointsModal";
 import { RefillModal } from "@/components/common/RefillModal";
 import { BetAmountSelector } from "@/components/game/BetAmountSelector";
+import { PlayerAvatar } from "@/components/common/PlayerAvatar";
 import { useGameRealtime } from "@/lib/hooks/useGameRealtime";
 import { useAuthoritativeTimer } from "@/lib/hooks/useAuthoritativeTimer";
 import { formatPoints, formatCurrency, formatCountdown } from "@/lib/utils/format";
@@ -103,6 +104,7 @@ export default function GameRoomPage({
           body: JSON.stringify({
             code: cleanCode,
             displayName: nameToUse,
+            avatarId: (typeof window !== "undefined" ? localStorage.getItem("quiz_player_avatar") : null) || undefined,
           }),
         });
         const data = await res.json();
@@ -113,6 +115,9 @@ export default function GameRoomPage({
             if (typeof window !== "undefined") {
               localStorage.setItem(`quiz_player_id_${cleanCode}`, data.data.gamePlayerId);
             }
+          }
+          if (data.data.avatarId && typeof window !== "undefined") {
+            localStorage.setItem("quiz_player_avatar", data.data.avatarId);
           }
           if (data.data.displayName) {
             setDisplayName(data.data.displayName);
@@ -412,9 +417,7 @@ export default function GameRoomPage({
         <div className="mb-4 sm:mb-5 flex flex-wrap items-center justify-between p-3 sm:p-4 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm gap-2">
           {/* Avatar & Player Name */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center font-black text-xs sm:text-sm shrink-0 shadow-sm">
-              {snapshot.player?.displayName.charAt(0).toUpperCase() || "P"}
-            </div>
+            <PlayerAvatar avatarId={snapshot.player?.avatarId} size="md" glow className="shrink-0" />
             <div className="min-w-0">
               <p className="text-xs sm:text-sm font-black text-[#191820] leading-tight truncate max-w-[120px] sm:max-w-[200px]">
                 {snapshot.player?.displayName || "Player"}
@@ -605,8 +608,9 @@ export default function GameRoomPage({
               <div className="w-full bg-white h-2 rounded-full overflow-hidden">
                 <div className="bg-[#6C5CE7] h-full w-full animate-pulse rounded-full" />
               </div>
-              <p className="text-xs text-[#6C5CE7] mt-3 font-bold">
-                Waiting for host to start the game...
+              <p className="text-xs text-[#6C5CE7] mt-3 font-bold flex items-center justify-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22B978] animate-ping" />
+                <span>Live sync active • Game starts automatically when host begins</span>
               </p>
               <div className="mt-4 flex justify-center">
                 <button
@@ -619,7 +623,49 @@ export default function GameRoomPage({
               </div>
             </div>
 
-            <p className="text-xs text-[#6B6A78] max-w-xs font-medium">
+            {/* Squad in Lobby Cards Grid */}
+            <div className="w-full mt-6 text-left border-t border-[#EAE7F2] pt-5">
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h3 className="text-xs font-black uppercase tracking-wider text-[#6C5CE7] flex items-center gap-1.5">
+                  <Users className="w-4 h-4" />
+                  <span>SQUAD IN ROOM ({snapshot.totalPlayers})</span>
+                </h3>
+                <span className="text-[11px] text-[#A09EB1] font-medium">Realtime presence</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto p-1">
+                {(snapshot.joinedPlayers && snapshot.joinedPlayers.length > 0
+                  ? snapshot.joinedPlayers
+                  : [{ id: playerId || "you", displayName: displayName, avatarId: snapshot.player?.avatarId }]
+                ).map((p) => {
+                  const isYou = p.id === playerId || p.displayName === displayName;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`flex items-center gap-2.5 p-2 rounded-2xl border transition-all ${
+                        isYou
+                          ? "bg-[#F0EEFF] border-[#6C5CE7] shadow-sm"
+                          : "bg-[#F7F6F2] border-[#EAE7F2]"
+                      }`}
+                    >
+                      <PlayerAvatar avatarId={p.avatarId} size="sm" glow={isYou} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-[#191820] truncate">
+                          {p.displayName}
+                        </p>
+                        {isYou && (
+                          <span className="text-[9px] font-black text-[#6C5CE7] uppercase">
+                            YOU
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <p className="text-xs text-[#6B6A78] max-w-xs font-medium mt-4">
               Keep this screen open. You will receive your ₹{formatPoints(snapshot.rules.startingBalance)} points automatically when the quiz starts.
             </p>
           </div>
@@ -774,6 +820,14 @@ export default function GameRoomPage({
               {/* Round Closed Details & Correct Answer Reveal */}
               {isQuestionClosed && (
                 <div className="mt-5 p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] text-xs animate-fade-in space-y-3">
+                  <div className="flex items-center gap-3">
+                    <PlayerAvatar
+                      avatarId={snapshot.player?.avatarId}
+                      size="lg"
+                      animation={snapshot.player?.lastSubmission?.isCorrect ? "bounce" : "shake"}
+                      className="shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
                   {snapshot.player?.lastSubmission?.isCorrect ? (
                     <div className="p-3 sm:p-3.5 rounded-xl bg-[#EAF9F2] border border-[#A7F3D0] text-[#22B978] font-black flex items-center justify-between text-xs sm:text-sm gap-2 shadow-sm animate-correct-pulse">
                       <span className="flex items-center gap-1.5 truncate">
@@ -805,6 +859,8 @@ export default function GameRoomPage({
                       </span>
                     </div>
                   )}
+                    </div>
+                  </div>
 
                   {snapshot.currentQuestion.explanation && (
                     <p className="text-[#6B6A78] border-t border-[#EAE7F2] pt-2.5 leading-relaxed font-medium">
@@ -881,12 +937,18 @@ export default function GameRoomPage({
 
             {/* Submitted Wait State (Matching Screenshots 10 & 11) */}
             {hasSubmitted && isQuestionActive && (
-              <div className="p-5 sm:p-6 rounded-3xl bg-[#FFF8F2] border border-[#FFD9BE] text-center shadow-sm space-y-2 animate-fade-in">
+              <div className="p-5 sm:p-6 rounded-3xl bg-[#FFF8F2] border border-[#FFD9BE] text-center shadow-sm space-y-3 animate-fade-in flex flex-col items-center">
+                <PlayerAvatar
+                  avatarId={snapshot.player?.avatarId}
+                  size="md"
+                  glow
+                  className="ring-2 ring-[#FF7417]"
+                />
                 <div className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-[#FFE8D6] text-[#FF7417] text-xs font-black font-mono">
                   <Lock className="w-3.5 h-3.5 text-[#FF7417] shrink-0" />
                   <span>Bet of {formatCurrency(snapshot.player?.lastSubmission?.betAmount || betAmount)} Locked</span>
                 </div>
-                <p className="text-xs text-[#6B6A78] font-medium">
+                <p className="text-xs text-[#6B6A78] font-medium max-w-sm">
                   Your answer is locked in. Balance will update after the countdown timer ends.
                 </p>
               </div>
@@ -1047,9 +1109,7 @@ export default function GameRoomPage({
                               )}
                             </td>
                             <td className="py-3 px-3 sm:px-4 flex items-center gap-2 min-w-0">
-                              <span className="w-6 h-6 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center text-[10px] font-black shrink-0">
-                                {entry.displayName.charAt(0).toUpperCase()}
-                              </span>
+                              <PlayerAvatar avatarId={entry.avatarId} size="sm" showCrown={isFirst} glow={isFirst} className="shrink-0" />
                               <span className="truncate">{entry.displayName}</span>
                             </td>
                             <td className="py-3 px-3 sm:px-4 font-mono text-[#FF7417] font-black whitespace-nowrap">

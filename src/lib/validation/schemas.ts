@@ -14,6 +14,10 @@ export const joinGameSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(30, "Name cannot exceed 30 characters")
     .regex(/^[\w\s\u00C0-\u017F\u0900-\u097F-]+$/, "Name contains invalid characters"),
+  avatarId: z
+    .string()
+    .trim()
+    .optional(),
 });
 
 export const submitQuestionSchema = z.object({

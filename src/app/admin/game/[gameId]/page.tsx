@@ -3,6 +3,7 @@
 import React, { useState, use, useMemo, useRef } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/common/Navbar";
+import { PlayerAvatar } from "@/components/common/PlayerAvatar";
 import { useAdminRealtime } from "@/lib/hooks/useAdminRealtime";
 import { useAuthoritativeTimer } from "@/lib/hooks/useAuthoritativeTimer";
 import { formatPoints, formatCountdown } from "@/lib/utils/format";
@@ -384,20 +385,20 @@ export default function AdminGameControlPage({
               <ArrowLeft className="w-3.5 h-3.5 text-[#6C5CE7]" />
               <span>Back</span>
             </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xl font-black text-[#FF7417] tracking-wider">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="font-mono text-lg sm:text-xl font-black text-[#FF7417] tracking-wider">
                   {snapshot.gameCode}
                 </span>
                 <span className="text-[#DDD6FE] font-bold">•</span>
-                <h1 className="text-base sm:text-lg font-black text-[#191820] truncate max-w-md uppercase">
+                <h1 className="text-sm sm:text-lg font-black text-[#191820] truncate uppercase">
                   {snapshot.title}
                 </h1>
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-[11px] text-[#6B6A78] font-mono">ID: {snapshot.gameId}</p>
+              <div className="flex flex-wrap items-center gap-x-2 text-[10px] sm:text-[11px] text-[#6B6A78] font-mono mt-0.5">
+                <span className="truncate max-w-[120px] sm:max-w-none">ID: {snapshot.gameId}</span>
                 {lastUpdated && (
-                  <span className="text-[11px] text-[#A09EB1] font-mono">
+                  <span className="text-[#A09EB1]">
                     • Synced: {lastUpdated.toLocaleTimeString()}
                   </span>
                 )}
@@ -514,75 +515,75 @@ export default function AdminGameControlPage({
           </div>
         )}
 
-        {/* 4 Metric Cards Strip (Matching Screenshots 5, 8, 14) */}
+        {/* 4 Metric Cards Strip (Responsive, no text cutoff) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 my-5 sm:my-6">
           {/* Card 1: Game Status */}
-          <div className="p-3.5 sm:p-4 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-3 sm:p-4 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
               <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#6C5CE7]" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] sm:text-[10px] text-[#6B6A78] font-black uppercase tracking-wider block truncate">
+              <span className="text-[9px] sm:text-[10px] text-[#6B6A78] font-black uppercase tracking-wider block">
                 GAME STATUS
               </span>
-              <span className="inline-block mt-0.5 truncate max-w-full">
-                {isLive ? (
-                  <span className="text-[11px] sm:text-xs font-black text-[#6C5CE7] uppercase font-mono">
-                    QUESTION ACTIVE
-                  </span>
-                ) : isLobby ? (
-                  <span className="text-[11px] sm:text-xs font-black text-[#22B978] uppercase font-mono">
-                    LOBBY
-                  </span>
-                ) : (
-                  <span className="text-[11px] sm:text-xs font-black text-[#6C5CE7] uppercase font-mono">
-                    {snapshot.status.replace("_", " ")}
-                  </span>
-                )}
+              <span className="text-[11px] sm:text-xs font-black uppercase font-mono block mt-0.5 leading-tight"
+                style={{ color: isLive ? "#6C5CE7" : isLobby ? "#22B978" : "#6C5CE7" }}
+              >
+                {isLive ? "QUESTION ACTIVE" : isLobby ? "LOBBY" : snapshot.status.replace("_", " ")}
               </span>
             </div>
           </div>
 
           {/* Card 2: Players */}
-          <div className="p-3.5 sm:p-4 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-3 sm:p-4 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
               <Users className="w-4 h-4 sm:w-5 sm:h-5 text-[#6C5CE7]" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] sm:text-[10px] text-[#6B6A78] font-black uppercase tracking-wider block truncate">
+              <span className="text-[9px] sm:text-[10px] text-[#6B6A78] font-black uppercase tracking-wider block">
                 PLAYERS
               </span>
-              <span className="text-[11px] sm:text-sm font-black text-[#FF7417] mt-0.5 block font-mono truncate">
-                {snapshot.totalPlayers} Joined ({snapshot.activePlayers} Active)
-              </span>
+              <div className="mt-0.5 leading-tight">
+                <span className="text-xs sm:text-sm font-black text-[#FF7417] font-mono">
+                  {snapshot.totalPlayers} Joined
+                </span>
+                <span className="text-[10px] sm:text-xs text-[#6B6A78] font-bold block sm:inline sm:ml-1">
+                  ({snapshot.activePlayers} Active)
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Card 3: Submissions */}
-          <div className="p-3.5 sm:p-4 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-3 sm:p-4 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
               <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-[#6C5CE7]" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] sm:text-[10px] text-[#6B6A78] font-black uppercase tracking-wider block truncate">
+              <span className="text-[9px] sm:text-[10px] text-[#6B6A78] font-black uppercase tracking-wider block">
                 SUBMISSIONS
               </span>
-              <span className="text-[11px] sm:text-sm font-black text-[#22B978] mt-0.5 block font-mono truncate">
-                {snapshot.submissionCount} Locked / {snapshot.unsubmittedCount} Pending
-              </span>
+              <div className="mt-0.5 leading-tight">
+                <span className="text-xs sm:text-sm font-black text-[#22B978] font-mono">
+                  {snapshot.submissionCount} Locked
+                </span>
+                <span className="text-[10px] sm:text-xs text-[#6B6A78] font-bold block sm:inline sm:ml-1">
+                  ({snapshot.unsubmittedCount} Pending)
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Card 4: Current Round */}
-          <div className="p-3.5 sm:p-4 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-3 sm:p-4 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
               <Flag className="w-4 h-4 sm:w-5 sm:h-5 text-[#6C5CE7]" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] sm:text-[10px] text-[#6B6A78] font-black uppercase tracking-wider block truncate">
+              <span className="text-[9px] sm:text-[10px] text-[#6B6A78] font-black uppercase tracking-wider block">
                 CURRENT ROUND
               </span>
-              <span className="text-[11px] sm:text-sm font-black text-[#191820] mt-0.5 block font-mono truncate">
+              <span className="text-xs sm:text-sm font-black text-[#191820] mt-0.5 block font-mono">
                 {snapshot.currentQuestionIndex} / {snapshot.totalQuestions}
               </span>
             </div>
@@ -758,7 +759,12 @@ export default function AdminGameControlPage({
                   snapshot.leaderboard.map((p) => (
                     <tr key={p.gamePlayerId} className="hover:bg-[#F7F6F2] text-[#191820]">
                       <td className="py-3.5 px-4 font-mono font-black text-[#6C5CE7]">#{p.rank}</td>
-                      <td className="py-3.5 px-4 font-bold text-[#191820]">{p.displayName}</td>
+                      <td className="py-3.5 px-4 font-bold text-[#191820]">
+                        <div className="flex items-center gap-2">
+                          <PlayerAvatar avatarId={p.avatarId} size="xs" />
+                          <span className="truncate">{p.displayName}</span>
+                        </div>
+                      </td>
                       <td className="py-3.5 px-4 font-mono text-[#FF7417] font-black text-sm">
                         ₹{formatPoints(p.balance)}
                       </td>

@@ -9,6 +9,7 @@ interface SubmissionItem {
 interface PlayerRecord {
   id: string;
   displayName: string;
+  avatarId?: string | null;
   balance: number;
   refillCount: number;
   totalRefillFees: number;
@@ -36,6 +37,7 @@ export async function getGameLeaderboard(
     select: {
       id: true,
       displayName: true,
+      avatarId: true,
       balance: true,
       refillCount: true,
       totalRefillFees: true,
@@ -58,6 +60,7 @@ export async function getGameLeaderboard(
     return {
       gamePlayerId: p.id,
       displayName: p.displayName,
+      avatarId: p.avatarId || "all-in-penguin",
       balance: p.balance,
       totalCorrect,
       totalWrong,
@@ -91,6 +94,7 @@ export async function getGameLeaderboard(
     rank: index + 1,
     gamePlayerId: entry.gamePlayerId,
     displayName: entry.displayName,
+    avatarId: entry.avatarId,
     balance: entry.balance,
     totalCorrect: entry.totalCorrect,
     totalWrong: entry.totalWrong,
