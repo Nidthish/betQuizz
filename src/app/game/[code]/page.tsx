@@ -8,6 +8,7 @@ import { BonusPointsModal } from "@/components/common/BonusPointsModal";
 import { RefillModal } from "@/components/common/RefillModal";
 import { BetAmountSelector } from "@/components/game/BetAmountSelector";
 import { PlayerAvatar } from "@/components/common/PlayerAvatar";
+import { PodiumLeaderboard } from "@/components/common/PodiumLeaderboard";
 import { useGameRealtime } from "@/lib/hooks/useGameRealtime";
 import { useAuthoritativeTimer } from "@/lib/hooks/useAuthoritativeTimer";
 import { formatPoints, formatCurrency, formatCountdown } from "@/lib/utils/format";
@@ -76,6 +77,7 @@ export default function GameRoomPage({
   const [initLoading, setInitLoading] = useState<boolean>(true);
   const [initError, setInitError] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(() => sounds.getMuted());
+  const [finishedView, setFinishedView] = useState<"stats" | "podium">("stats");
 
   // Balance change animation tracking
   const [balanceDelta, setBalanceDelta] = useState<{ amount: number; type: "win" | "loss" } | null>(null);
@@ -956,176 +958,189 @@ export default function GameRoomPage({
           </div>
         )}
 
-        {/* 5. GAME COMPLETED VIEW (Matching Screenshots 3 & 12) */}
+        {/* 5. GAME COMPLETED VIEW */}
         {isFinished && (
           <div className="space-y-4 sm:space-y-5 animate-fade-in">
-            {/* Scoreboard Card */}
-            <div className="p-5 sm:p-9 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm text-center">
-              <div className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1 rounded-full bg-[#EAF9F2] border border-[#A7F3D0] text-[#22B978] text-[11px] sm:text-xs font-black uppercase tracking-wider mb-3">
-                <CheckCircle2 className="w-4 h-4 text-[#22B978] shrink-0" />
-                <span>GAME FINISHED</span>
-              </div>
-              <h2 className="text-xl sm:text-3xl font-black text-[#191820] uppercase tracking-tight">
-                FINAL AUTHORITATIVE SCOREBOARD
-              </h2>
-              <p className="text-xs text-[#6B6A78] mt-1 font-medium">Quiz Completed</p>
-
-              {snapshot.player && (
-                <div className="mt-6 sm:mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 text-xs text-left">
-                  {/* Tile 1: Starting Balance */}
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
-                      <Wallet className="w-5 h-5 text-[#6C5CE7]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Starting Balance</span>
-                      <strong className="text-[#191820] text-sm font-black font-mono truncate block">
-                        {formatCurrency(snapshot.rules.startingBalance)}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {/* Tile 2: Final Balance */}
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#FFF3E8] text-[#FF7417] flex items-center justify-center shrink-0">
-                      <Coins className="w-5 h-5 text-[#FF7417]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Final Balance</span>
-                      <strong className="text-[#FF7417] text-sm sm:text-base font-black font-mono truncate block">
-                        {formatCurrency(snapshot.player.balance)}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {/* Tile 3: Questions Answered */}
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
-                      <HelpCircle className="w-5 h-5 text-[#6C5CE7]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Questions Answered</span>
-                      <strong className="text-[#191820] text-sm font-black font-mono truncate block">
-                        {snapshot.totalQuestions} Questions
-                      </strong>
-                    </div>
-                  </div>
-
-                  {/* Tile 4: Wins / Losses */}
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
-                      <Trophy className="w-5 h-5 text-[#6C5CE7]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Wins / Losses</span>
-                      <strong className="text-[#191820] text-sm font-mono truncate block">
-                        <span className="text-[#22B978] font-black">{snapshot.player.totalWins ?? 0}W</span>
-                        {" / "}
-                        <span className="text-[#EF5350] font-black">{snapshot.player.totalLosses ?? 0}L</span>
-                      </strong>
-                    </div>
-                  </div>
-
-                  {/* Tile 5: Total Wagered */}
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
-                      <Layers className="w-5 h-5 text-[#6C5CE7]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Total Wagered</span>
-                      <strong className="text-[#191820] text-sm font-black font-mono truncate block">
-                        {formatCurrency(snapshot.player.totalWagered ?? 0)}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {/* Tile 6: Net Result */}
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#EAF9F2] text-[#22B978] flex items-center justify-center shrink-0">
-                      <TrendingUp className="w-5 h-5 text-[#22B978]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Net Result</span>
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-black font-mono ${
-                          (snapshot.player.netResult ?? 0) >= 0
-                            ? "bg-[#EAF9F2] text-[#22B978]"
-                            : "bg-[#FDEEEC] text-[#EF5350]"
-                        }`}
-                      >
-                        {(snapshot.player.netResult ?? 0) >= 0
-                          ? `+${formatCurrency(snapshot.player.netResult ?? 0)}`
-                          : `-${formatCurrency(Math.abs(snapshot.player.netResult ?? 0))}`}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
+            {/* View Switcher Tabs */}
+            <div className="flex items-center justify-center gap-2 p-1.5 bg-[#F0EEFF] rounded-2xl max-w-sm mx-auto border border-[#DDD6FE]">
+              <button
+                type="button"
+                onClick={() => setFinishedView("stats")}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                  finishedView === "stats"
+                    ? "bg-[#6C5CE7] text-white shadow-sm"
+                    : "text-[#6C5CE7] hover:bg-[#E9E5FF]"
+                }`}
+              >
+                <span>📊 My Statistics</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFinishedView("podium")}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                  finishedView === "podium"
+                    ? "bg-[#6C5CE7] text-white shadow-sm"
+                    : "text-[#6C5CE7] hover:bg-[#E9E5FF]"
+                }`}
+              >
+                <span>🏆 Podium Leaderboard</span>
+              </button>
             </div>
 
-            {/* Final Standings Table (Matching Screenshot 12) */}
-            {snapshot.leaderboard.length > 0 && (
-              <div className="p-5 sm:p-7 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm">
-                <div className="flex items-center gap-2 mb-4 sm:mb-5">
-                  <Trophy className="w-5 h-5 text-[#FF7417] shrink-0" />
-                  <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#191820]">
-                    FINAL LEADERBOARD
-                  </h3>
+            {/* TAB 1: PLAYER STATISTICS VIEW */}
+            {finishedView === "stats" && (
+              <div className="p-5 sm:p-9 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm text-center">
+                <div className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1 rounded-full bg-[#EAF9F2] border border-[#A7F3D0] text-[#22B978] text-[11px] sm:text-xs font-black uppercase tracking-wider mb-3">
+                  <CheckCircle2 className="w-4 h-4 text-[#22B978] shrink-0" />
+                  <span>GAME FINISHED</span>
                 </div>
+                <h2 className="text-xl sm:text-3xl font-black text-[#191820] uppercase tracking-tight">
+                  YOUR FINAL PERFORMANCE
+                </h2>
+                <p className="text-xs text-[#6B6A78] mt-1 font-medium">Session Completed Authoritatively</p>
 
-                <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
-                  <table className="w-full text-left text-xs min-w-[480px]">
-                    <thead>
-                      <tr className="bg-[#F0EEFF] text-[#6C5CE7] uppercase tracking-wider font-extrabold rounded-xl">
-                        <th className="py-2.5 sm:py-3 px-3 sm:px-4 rounded-l-xl">RANK</th>
-                        <th className="py-2.5 sm:py-3 px-3 sm:px-4">PLAYER</th>
-                        <th className="py-2.5 sm:py-3 px-3 sm:px-4">BALANCE</th>
-                        <th className="py-2.5 sm:py-3 px-3 sm:px-4">REFILLS</th>
-                        <th className="py-2.5 sm:py-3 px-3 sm:px-4 rounded-r-xl">NET SCORE</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#EAE7F2] font-semibold">
-                      {snapshot.leaderboard.map((entry) => {
-                        const isFirst = entry.rank === 1;
-                        return (
-                          <tr
-                            key={entry.gamePlayerId}
-                            className={`transition-colors ${
-                              isFirst
-                                ? "bg-[#FFF9E6] font-bold text-[#191820]"
-                                : entry.isCurrentPlayer
-                                ? "bg-[#F0EEFF] text-[#191820]"
-                                : "text-[#191820] hover:bg-[#F7F6F2]"
+                {snapshot.player && (
+                  <>
+                    {/* Player Highlight Banner */}
+                    <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-[#F0EEFF] via-white to-[#FFF3E8] border border-[#EAE7F2] flex items-center justify-between gap-3 max-w-md mx-auto">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <PlayerAvatar
+                          avatarId={snapshot.player.avatarId}
+                          size="md"
+                          glow
+                          className="shrink-0"
+                        />
+                        <div className="text-left min-w-0">
+                          <span className="text-sm font-black text-[#191820] truncate block">
+                            {snapshot.player.displayName}
+                          </span>
+                          <span className="text-[11px] text-[#6C5CE7] font-bold">
+                            {snapshot.player.avatarId?.replace(/-/g, " ").toUpperCase() || "WAGER SQUAD"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] text-[#6B6A78] block uppercase font-bold">Balance</span>
+                        <strong className="text-base font-black font-mono text-[#FF7417]">
+                          {formatCurrency(snapshot.player.balance)}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 sm:mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 text-xs text-left">
+                      {/* Tile 1: Starting Balance */}
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
+                          <Wallet className="w-5 h-5 text-[#6C5CE7]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Starting Balance</span>
+                          <strong className="text-[#191820] text-sm font-black font-mono truncate block">
+                            {formatCurrency(snapshot.rules.startingBalance)}
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* Tile 2: Final Balance */}
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#FFF3E8] text-[#FF7417] flex items-center justify-center shrink-0">
+                          <Coins className="w-5 h-5 text-[#FF7417]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Final Balance</span>
+                          <strong className="text-[#FF7417] text-sm sm:text-base font-black font-mono truncate block">
+                            {formatCurrency(snapshot.player.balance)}
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* Tile 3: Questions Answered */}
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
+                          <HelpCircle className="w-5 h-5 text-[#6C5CE7]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Questions Answered</span>
+                          <strong className="text-[#191820] text-sm font-black font-mono truncate block">
+                            {snapshot.totalQuestions} Questions
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* Tile 4: Wins / Losses */}
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
+                          <Trophy className="w-5 h-5 text-[#6C5CE7]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Wins / Losses</span>
+                          <strong className="text-[#191820] text-sm font-mono truncate block">
+                            <span className="text-[#22B978] font-black">{snapshot.player.totalWins ?? 0}W</span>
+                            {" / "}
+                            <span className="text-[#EF5350] font-black">{snapshot.player.totalLosses ?? 0}L</span>
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* Tile 5: Total Wagered */}
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shrink-0">
+                          <Layers className="w-5 h-5 text-[#6C5CE7]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Total Wagered</span>
+                          <strong className="text-[#191820] text-sm font-black font-mono truncate block">
+                            {formatCurrency(snapshot.player.totalWagered ?? 0)}
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* Tile 6: Net Result */}
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] flex items-center gap-3 sm:gap-3.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#EAF9F2] text-[#22B978] flex items-center justify-center shrink-0">
+                          <TrendingUp className="w-5 h-5 text-[#22B978]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[#6B6A78] block uppercase font-bold text-[10px] truncate">Net Result</span>
+                          <span
+                            className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-black font-mono ${
+                              (snapshot.player.netResult ?? 0) >= 0
+                                ? "bg-[#EAF9F2] text-[#22B978]"
+                                : "bg-[#FDEEEC] text-[#EF5350]"
                             }`}
                           >
-                            <td className="py-3 px-3 sm:px-4 font-mono font-black">
-                              {isFirst ? (
-                                <span className="inline-flex items-center gap-1 text-[#FFB800]">
-                                  <Crown className="w-3.5 h-3.5 text-[#FFB800] shrink-0" />
-                                  <span>#1</span>
-                                </span>
-                              ) : (
-                                <span className="text-[#6C5CE7]">#{entry.rank}</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 sm:px-4 flex items-center gap-2 min-w-0">
-                              <PlayerAvatar avatarId={entry.avatarId} size="sm" showCrown={isFirst} glow={isFirst} className="shrink-0" />
-                              <span className="truncate">{entry.displayName}</span>
-                            </td>
-                            <td className="py-3 px-3 sm:px-4 font-mono text-[#FF7417] font-black whitespace-nowrap">
-                              {formatCurrency(entry.balance)}
-                            </td>
-                            <td className="py-3 px-3 sm:px-4 text-[#6B6A78] font-mono whitespace-nowrap">{entry.refillCount}</td>
-                            <td className="py-3 px-3 sm:px-4 font-mono font-black text-[#FF7417] whitespace-nowrap">
-                              {formatCurrency(entry.netScore)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                            {(snapshot.player.netResult ?? 0) >= 0
+                              ? `+${formatCurrency(snapshot.player.netResult ?? 0)}`
+                              : `-${formatCurrency(Math.abs(snapshot.player.netResult ?? 0))}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prominent CTA to continue to the Podium Leaderboard */}
+                    <button
+                      type="button"
+                      onClick={() => setFinishedView("podium")}
+                      className="w-full mt-6 sm:mt-7 py-4 rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2.5 transition-all"
+                    >
+                      <Trophy className="w-5 h-5 text-[#FFC72C]" />
+                      <span>CONTINUE TO OVERALL LEADERBOARD</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
               </div>
+            )}
+
+            {/* TAB 2: PODIUM LEADERBOARD DESIGN */}
+            {finishedView === "podium" && (
+              <PodiumLeaderboard
+                leaderboard={snapshot.leaderboard}
+                currentPlayerId={playerId ?? undefined}
+                title="Final Results"
+                showBackToStats={true}
+                onViewStats={() => setFinishedView("stats")}
+              />
             )}
           </div>
         )}

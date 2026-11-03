@@ -4,6 +4,7 @@ import React, { useState, use, useMemo, useRef } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/common/Navbar";
 import { PlayerAvatar } from "@/components/common/PlayerAvatar";
+import { PodiumLeaderboard } from "@/components/common/PodiumLeaderboard";
 import { useAdminRealtime } from "@/lib/hooks/useAdminRealtime";
 import { useAuthoritativeTimer } from "@/lib/hooks/useAuthoritativeTimer";
 import { formatPoints, formatCountdown } from "@/lib/utils/format";
@@ -726,6 +727,16 @@ export default function AdminGameControlPage({
             </div>
           )}
         </div>
+
+        {/* Podium Leaderboard for Host Projection when Game is Finished */}
+        {isFinished && (
+          <div className="mb-6">
+            <PodiumLeaderboard
+              leaderboard={snapshot.leaderboard}
+              title="Classroom Tournament Podium"
+            />
+          </div>
+        )}
 
         {/* Live Standings Table (Matching Screenshots 12 & 14) */}
         <div className="p-6 sm:p-7 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm">
