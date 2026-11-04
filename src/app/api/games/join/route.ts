@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
         gameStatus: game.status,
         gamePlayerId: gamePlayer.id,
         displayName: gamePlayer.displayName,
-        avatarId: gamePlayer.avatarId || cleanAvatarId,
+        avatarId: cleanAvatarId,
         balance: gamePlayer.balance,
       },
       requestId,
