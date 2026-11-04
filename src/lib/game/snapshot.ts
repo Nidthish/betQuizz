@@ -1,5 +1,5 @@
 import { prisma } from "../db";
-import { AuthoritativeGameSnapshot, AdminGameSnapshot, SanitizedQuestion } from "../types/game";
+import { AuthoritativeGameSnapshot, AdminGameSnapshot, SanitizedQuestion, JoinedPlayerSummary } from "../types/game";
 import { getGameLeaderboard } from "./leaderboard-engine";
 import { GAME_CONSTANTS } from "../constants";
 
@@ -115,6 +115,7 @@ export async function getPlayerGameSnapshot(
       playerData = {
         id: p.id,
         displayName: p.displayName,
+        avatarId: p.avatarId || "all-in-penguin",
         balance: p.balance,
         status: p.status,
         refillCount: p.refillCount,
@@ -151,6 +152,29 @@ export async function getPlayerGameSnapshot(
     }
   }
 
+  // Fetch joined players in the waiting room / lobby for multiplayer presence
+  let joinedPlayers: JoinedPlayerSummary[] = [];
+  if (game.status === "DRAFT" || game.status === "LOBBY") {
+    const rawJoined = await prisma.gamePlayer.findMany({
+      where: {
+        gameId,
+        status: { not: "REMOVED" },
+      },
+      select: {
+        id: true,
+        displayName: true,
+        avatarId: true,
+      },
+      orderBy: { joinedAt: "asc" },
+      take: 80,
+    });
+    joinedPlayers = rawJoined.map((p: { id: string; displayName: string; avatarId: string | null }) => ({
+      id: p.id,
+      displayName: p.displayName,
+      avatarId: p.avatarId || "all-in-penguin",
+    }));
+  }
+
   return {
     gameId: game.id,
     gameCode: game.code,
@@ -166,6 +190,7 @@ export async function getPlayerGameSnapshot(
     serverTime: new Date().toISOString(),
     player: playerData,
     leaderboard,
+    joinedPlayers,
     totalPlayers: game._count.players,
     isCompleted: game.status === "FINISHED",
     rules: {

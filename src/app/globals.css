@@ -95,3 +95,85 @@ button, input, select, textarea {
 .animate-correct-pulse {
   animation: correctPulse 0.5s ease-out;
 }
+
+/* Character & Mascot Animations */
+@keyframes avatarFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-avatar-float {
+  animation: avatarFloat 3.5s ease-in-out infinite;
+}
+
+@keyframes avatarBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-10px) scale(1.08);
+  }
+  50% {
+    transform: translateY(0) scale(0.96);
+  }
+  75% {
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
+.animate-avatar-bounce {
+  animation: avatarBounce 0.75s ease-in-out;
+}
+
+@keyframes avatarShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-6px);
+  }
+  40%, 80% {
+    transform: translateX(6px);
+  }
+}
+
+.animate-avatar-shake {
+  animation: avatarShake 0.45s ease-in-out;
+}
+
+@keyframes avatarCelebrate {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.15) rotate(5deg);
+  }
+  75% {
+    transform: scale(1.08) rotate(-3deg);
+  }
+}
+
+.animate-avatar-celebrate {
+  animation: avatarCelebrate 1.2s ease-in-out infinite;
+}
+
+/* Accessibility: Respect Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-avatar-float,
+  .animate-avatar-bounce,
+  .animate-avatar-shake,
+  .animate-avatar-celebrate,
+  .animate-fade-in,
+  .animate-float-fade,
+  .animate-correct-pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+}

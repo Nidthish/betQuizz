@@ -4,9 +4,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { AdminGameSnapshot } from "../types/game";
 
 /**
- * Clean, on-demand Neon database synchronizer for game administrators.
- * ZERO background polling loops - eliminates all infinite query spam and database load.
- * Host gets fresh state upon initial load, upon host actions, and on-demand via the Refresh button.
+ * Authoritative Neon database synchronizer for game administrators.
+ * Automatically synchronizes game events, submissions, and player join activity.
+ * Host gets fresh state upon initial load, host actions, and periodic live sync.
  */
 export function useAdminRealtime(gameId: string) {
   const [snapshot, setSnapshot] = useState<AdminGameSnapshot | null>(null);
@@ -48,7 +48,7 @@ export function useAdminRealtime(gameId: string) {
     }
   }, [gameId]);
 
-  // Strictly fetch ONCE on mount when admin enters the page — ZERO setInterval polling!
+  // Synchronize initial load and active live updates
   useEffect(() => {
     isMountedRef.current = true;
     if (!initialFetchedRef.current) {
@@ -56,8 +56,15 @@ export function useAdminRealtime(gameId: string) {
       fetchSnapshot();
     }
 
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchSnapshot();
+      }
+    }, 2000);
+
     return () => {
       isMountedRef.current = false;
+      clearInterval(interval);
     };
   }, [gameId, fetchSnapshot]);
 

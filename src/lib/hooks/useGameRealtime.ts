@@ -22,9 +22,9 @@ export interface UseGameRealtimeReturn {
 }
 
 /**
- * Ultra-lean, low-load database snapshot synchronizer.
- * Fetches authoritative game state directly from Neon PostgreSQL without polling.
- * Operates purely on-demand: fetches ONCE on initial join, and on explicit user actions.
+ * Authoritative Neon PostgreSQL database synchronizer for players.
+ * Continuously detects game status changes (e.g. host starting the game, next round, pause, reset).
+ * Ensures instant transition from lobby to active round as soon as the host begins.
  */
 export function useGameRealtime(
   gameId: string,
@@ -72,17 +72,40 @@ export function useGameRealtime(
     }
   }, [gameId, playerId]);
 
-  // Pure on-demand fetch: strictly ONCE on mount when player enters — ZERO setInterval loops!
+  // Initial fetch and automatic state transition sync
   useEffect(() => {
     isMountedRef.current = true;
     fetchSnapshot();
 
+    // Fast sync in Lobby, Intermission, or Paused (1.2s) so transitions feel instant
+    // Steady sync during active questions (3.5s) to detect admin actions
+    const currentStatus = snapshot?.status;
+    const isTransitionState =
+      !currentStatus ||
+      currentStatus === "LOBBY" ||
+      currentStatus === "DRAFT" ||
+      currentStatus === "QUESTION_CLOSED" ||
+      currentStatus === "PAUSED";
+
+    const pollInterval = isTransitionState
+      ? 1200
+      : currentStatus === "FINISHED"
+      ? 8000
+      : 3500;
+
+    const intervalId = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchSnapshot();
+      }
+    }, pollInterval);
+
     return () => {
       isMountedRef.current = false;
+      clearInterval(intervalId);
     };
-  }, [gameId, fetchSnapshot]);
+  }, [gameId, fetchSnapshot, snapshot?.status]);
 
-  // Submit Answer + Bet atomically in one request (Sections 8 & 25)
+  // Submit Answer + Bet atomically in one request
   const submitBet = async (
     questionId: string,
     selectedAnswer: string,

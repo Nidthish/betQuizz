@@ -136,6 +136,7 @@ model GamePlayer {
   userId             String?
   guestSessionToken  String?              // Unique guest token to prevent identity theft
   displayName        String
+  avatarId           String?              @default("all-in-penguin")
   balance            Int                  @default(10000)
   status             PlayerStatus         @default(JOINED)
   joinedAt           DateTime             @default(now())

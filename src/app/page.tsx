@@ -3,28 +3,36 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/common/Navbar";
+import { MASCOTS, Mascot, getMascot } from "@/lib/constants/mascots";
+import { PlayerAvatar } from "@/components/common/PlayerAvatar";
 import {
   Gamepad2,
   User,
   AlertCircle,
   ArrowRight,
+  ArrowLeft,
   Coins,
   BarChart2,
   Calculator,
   RotateCcw,
-  Trophy,
-  BookOpen,
   Sparkles,
+  CheckCircle2,
+  Check,
+  Smile,
 } from "lucide-react";
 
 export default function LandingPage() {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const activeMascot: Mascot | null = selectedAvatarId ? getMascot(selectedAvatarId) : null;
+
+  // Step 1: Validate Game Code
   const handleValidateCode = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -37,12 +45,32 @@ export default function LandingPage() {
     setStep(2);
   };
 
-  const handleJoinGame = async (e: React.FormEvent) => {
+  // Step 2: Validate Nickname & Move to Character Select
+  const handleValidateName = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     const cleanName = displayName.trim();
     if (!cleanName || cleanName.length < 2) {
       setError("Please enter a nickname with at least 2 characters.");
+      return;
+    }
+    setStep(3);
+  };
+
+  // Step 3: Confirm Mascot and Join Room
+  const handleJoinGame = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const cleanName = displayName.trim();
+
+    if (!cleanName || cleanName.length < 2) {
+      setError("Please enter a nickname with at least 2 characters.");
+      setStep(2);
+      return;
+    }
+
+    if (!selectedAvatarId) {
+      setError("Please select a mascot below before joining.");
       return;
     }
 
@@ -54,6 +82,7 @@ export default function LandingPage() {
         body: JSON.stringify({
           code: code.trim().toUpperCase(),
           displayName: cleanName,
+          avatarId: selectedAvatarId,
         }),
       });
 
@@ -66,6 +95,7 @@ export default function LandingPage() {
 
       if (typeof window !== "undefined") {
         localStorage.setItem("quiz_player_name", cleanName);
+        localStorage.setItem("quiz_player_avatar", selectedAvatarId);
         if (data.data?.gamePlayerId) {
           localStorage.setItem(`quiz_player_id_${code.trim().toUpperCase()}`, data.data.gamePlayerId);
         }
@@ -80,7 +110,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F6F2] text-[#191820] relative overflow-hidden">
-      <Navbar variant={step === 2 ? "host" : "player"} />
+      <Navbar variant={step === 3 ? "host" : "player"} />
 
       {/* Decorative background bottom wave */}
       <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none opacity-40 overflow-hidden">
@@ -94,110 +124,75 @@ export default function LandingPage() {
         </svg>
       </div>
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-12 flex flex-col justify-center relative z-10">
-        {/* Hero Section */}
-        <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-10">
-          <div className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-[#E9E5FF] text-[#6C5CE7] text-[11px] sm:text-xs font-bold uppercase tracking-wider mb-3.5 sm:mb-4 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-[#6C5CE7] animate-pulse shrink-0" />
-            <span className="truncate">REALTIME MULTIPLAYER QUIZ PLATFORM</span>
+      <main className="flex-1 max-w-4xl w-full mx-auto px-3.5 sm:px-6 py-4 sm:py-8 flex flex-col justify-center relative z-10">
+        {/* Step Indicator Header */}
+        <div className="flex items-center justify-center gap-2 mb-4 sm:mb-6">
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all ${
+              step === 1 ? "bg-[#6C5CE7] text-white shadow-sm" : "bg-[#E9E5FF] text-[#6C5CE7]"
+            }`}
+          >
+            <span>1</span>
+            <span className="hidden sm:inline">Room Code</span>
           </div>
-
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#191820] uppercase flex items-center justify-center gap-2.5 sm:gap-3 relative">
-            <span>QUIZ</span>
-            <span className="text-[#FF7417] relative">
-              BETTING
-              {/* Curved underline */}
-              <svg
-                className="absolute -bottom-2 left-0 w-full h-3 text-[#6C5CE7]"
-                viewBox="0 0 100 12"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M0,8 Q50,0 100,8"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </span>
-          </h1>
-
-          <p className="mt-4 sm:mt-5 text-xs sm:text-base text-[#6B6A78] leading-relaxed max-w-lg mx-auto font-medium px-2">
-            Wager points on your trivia knowledge. Start with <strong className="text-[#FF7417] font-bold">10,000 points</strong>, bet on each question, and compete on the live leaderboard.
-          </p>
+          <span className="text-[#DDD6FE] font-black">→</span>
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all ${
+              step === 2 ? "bg-[#6C5CE7] text-white shadow-sm" : "bg-[#E9E5FF] text-[#6C5CE7]"
+            }`}
+          >
+            <span>2</span>
+            <span className="hidden sm:inline">Nickname</span>
+          </div>
+          <span className="text-[#DDD6FE] font-black">→</span>
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all ${
+              step === 3 ? "bg-[#6C5CE7] text-white shadow-sm" : "bg-[#E9E5FF] text-[#6C5CE7]"
+            }`}
+          >
+            <span>3</span>
+            <span className="hidden sm:inline">Mascot</span>
+          </div>
         </div>
 
-        {/* Floating playful decorative elements */}
-        <div className="relative max-w-md w-full mx-auto">
-          {/* Left trophy illustration decoration */}
-          <div className="hidden lg:flex flex-col items-center absolute -left-48 top-6 pointer-events-none select-none">
-            <div className="w-32 h-32 rounded-3xl bg-gradient-to-tr from-[#FFF3E8] to-[#E9E5FF] border border-[#DDD6FE] p-4 flex items-center justify-center shadow-lg transform -rotate-6">
-              <Trophy className="w-16 h-16 text-[#FFB800]" />
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-[#FFB800] text-xs font-bold">
-              <Sparkles className="w-3.5 h-3.5 text-[#FFB800]" />
-              <span>LIVE TRIVIA</span>
-            </div>
+        {/* Global Error Banner */}
+        {error && (
+          <div className="max-w-md w-full mx-auto mb-4 p-3.5 rounded-2xl bg-[#FDEEEC] border border-[#FCA5A5] text-[#EF5350] text-xs font-bold flex items-center gap-2 animate-fade-in shadow-sm">
+            <AlertCircle className="w-4 h-4 text-[#EF5350] shrink-0" />
+            <span className="truncate">{error}</span>
           </div>
+        )}
 
-          {/* Right books illustration decoration */}
-          <div className="hidden lg:flex flex-col items-center absolute -right-48 top-6 pointer-events-none select-none">
-            <div className="w-32 h-32 rounded-3xl bg-gradient-to-tr from-[#E9E5FF] to-[#FFF3E8] border border-[#DDD6FE] p-4 flex items-center justify-center shadow-lg transform rotate-6">
-              <BookOpen className="w-16 h-16 text-[#6C5CE7]" />
+        {/* STEP 1: ENTER ROOM CODE */}
+        {step === 1 && (
+          <div className="max-w-md w-full mx-auto animate-fade-in">
+            {/* Hero text */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#E9E5FF] text-[#6C5CE7] text-[11px] font-bold uppercase tracking-wider mb-2.5 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-[#6C5CE7] animate-pulse shrink-0" />
+                <span>REALTIME MULTIPLAYER QUIZ</span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[#191820] uppercase flex items-center justify-center gap-2">
+                <span>QUIZ</span>
+                <span className="text-[#FF7417]">BETTING</span>
+              </h1>
+              <p className="mt-2 text-xs sm:text-sm text-[#6B6A78] font-medium">
+                Enter your host&apos;s game code to enter the arena.
+              </p>
             </div>
-            <div className="mt-3 px-3 py-1 rounded-full bg-[#E9E5FF] text-[#6C5CE7] text-xs font-bold">
-              QUIZ ARENA
-            </div>
-          </div>
 
-          {/* Main Action Card */}
-          <div className="bg-white border border-[#EAE7F2] rounded-3xl p-5 sm:p-8 shadow-xl shadow-purple-950/5 relative">
-            <div className="flex items-center justify-between pb-4 sm:pb-5 border-b border-[#EAE7F2] mb-5 sm:mb-6">
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="bg-white border border-[#EAE7F2] rounded-3xl p-6 sm:p-7 shadow-xl shadow-purple-950/5">
+              <div className="flex items-center gap-3 pb-4 border-b border-[#EAE7F2] mb-5">
                 <div className="w-10 h-10 rounded-2xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shadow-sm shrink-0">
-                  {step === 1 ? (
-                    <Gamepad2 className="w-5 h-5 text-[#6C5CE7]" />
-                  ) : (
-                    <User className="w-5 h-5 text-[#6C5CE7]" />
-                  )}
+                  <Gamepad2 className="w-5 h-5 text-[#6C5CE7]" />
                 </div>
-                <div className="min-w-0">
-                  <h2 className="text-base font-extrabold text-[#191820] truncate">
-                    {step === 1 ? "Enter Game Code" : "Choose Nickname"}
-                  </h2>
-                  <p className="text-xs text-[#6B6A78] mt-0.5 truncate">
-                    {step === 1 ? (
-                      "Get the 6-character code from your host"
-                    ) : (
-                      <span>
-                        Joining room <strong className="text-[#6C5CE7] font-mono">{code}</strong>
-                      </span>
-                    )}
-                  </p>
+                <div>
+                  <h2 className="text-base font-extrabold text-[#191820]">Enter Game Code</h2>
+                  <p className="text-xs text-[#6B6A78]">Get the 4–10 character code from your host</p>
                 </div>
               </div>
-              {step === 2 && (
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="text-xs text-[#6C5CE7] hover:underline font-bold transition-all shrink-0 ml-2"
-                >
-                  Change Code
-                </button>
-              )}
-            </div>
 
-            {error && (
-              <div className="mb-5 p-3.5 rounded-2xl bg-[#FDEEEC] border border-[#FCA5A5] text-[#EF5350] text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-[#EF5350] shrink-0" />
-                <span className="truncate">{error}</span>
-              </div>
-            )}
-
-            {step === 1 ? (
-              /* Step 1: Enter Game Code */
-              <form onSubmit={handleValidateCode} className="space-y-4 sm:space-y-5">
+              <form onSubmit={handleValidateCode} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-[#6B6A78] mb-2 uppercase tracking-wider">
                     GAME CODE
@@ -210,59 +205,257 @@ export default function LandingPage() {
                     maxLength={10}
                     autoFocus
                     required
-                    className="w-full h-[50px] sm:h-[54px] px-4 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/20 font-mono text-center text-xl sm:text-2xl tracking-widest font-black text-[#191820] uppercase placeholder:text-[#A09EB1] outline-none transition-all"
+                    className="w-full h-[52px] sm:h-[56px] px-4 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/20 font-mono text-center text-2xl tracking-widest font-black text-[#191820] uppercase placeholder:text-[#A09EB1] outline-none transition-all"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full h-[50px] sm:h-[54px] rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full h-[52px] sm:h-[56px] rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
                 >
                   <span>CONTINUE</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
-            ) : (
-              /* Step 2: Player Details */
-              <form onSubmit={handleJoinGame} className="space-y-4 sm:space-y-5">
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: ENTER NICKNAME */}
+        {step === 2 && (
+          <div className="max-w-md w-full mx-auto animate-fade-in">
+            <div className="bg-white border border-[#EAE7F2] rounded-3xl p-6 sm:p-7 shadow-xl shadow-purple-950/5">
+              <div className="flex items-center justify-between pb-4 border-b border-[#EAE7F2] mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center shadow-sm shrink-0">
+                    <User className="w-5 h-5 text-[#6C5CE7]" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-extrabold text-[#191820]">Your Nickname</h2>
+                    <p className="text-xs text-[#6B6A78]">
+                      Joining room <strong className="text-[#6C5CE7] font-mono">{code}</strong>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="inline-flex items-center gap-1 text-xs text-[#6C5CE7] hover:underline font-bold"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back</span>
+                </button>
+              </div>
+
+              <form onSubmit={handleValidateName} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-bold text-[#6B6A78] mb-2 uppercase tracking-wider">
-                    YOUR NICKNAME
+                  <label className="block text-xs font-black text-[#6B6A78] mb-2 uppercase tracking-wider flex items-center justify-between">
+                    <span>ENTER YOUR NICKNAME</span>
+                    <span className="text-[11px] font-normal text-[#A09EB1] font-mono">
+                      {displayName.trim().length}/25
+                    </span>
                   </label>
                   <input
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Enter your name"
+                    placeholder="E.g. SpeedRacer, QuizMaster"
                     maxLength={25}
                     autoFocus
                     required
-                    className="w-full h-[50px] sm:h-[54px] px-4 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/20 text-sm sm:text-base font-bold text-[#191820] placeholder:text-[#A09EB1] outline-none transition-all"
+                    className="w-full h-[52px] sm:h-[56px] px-4 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] focus:border-[#6C5CE7] focus:ring-2 focus:ring-[#6C5CE7]/20 text-base font-bold text-[#191820] placeholder:text-[#A09EB1] outline-none transition-all"
                   />
+                  <p className="text-[11px] text-[#A09EB1] mt-2 font-medium">
+                    This is how other students and the host will see you on the live scoreboard.
+                  </p>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="w-full h-[50px] sm:h-[54px] rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] disabled:opacity-50 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
+                  disabled={displayName.trim().length < 2}
+                  className="w-full h-[52px] sm:h-[56px] rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
                 >
-                  {loading ? (
-                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <span>ENTER WAITING ROOM</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
+                  <span>CHOOSE YOUR MASCOT</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Official Platform Rules (Step 2 or visible below) */}
-        <div className="mt-8 sm:mt-14 max-w-3xl mx-auto w-full">
-          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {/* STEP 3: DEDICATED CHARACTER SELECTION PAGE (Responsive Desktop 2-Col & Mobile Stack) */}
+        {step === 3 && (
+          <div className="max-w-4xl w-full mx-auto animate-fade-in">
+            <div className="bg-white border border-[#EAE7F2] rounded-3xl p-4 sm:p-6 shadow-xl shadow-purple-950/5 flex flex-col">
+              {/* Header Navigation Bar */}
+              <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#EAE7F2] mb-3 sm:mb-5">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F0EEFF] text-[#6C5CE7] text-xs font-bold hover:bg-[#E9E5FF] transition-colors shrink-0"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back</span>
+                </button>
+
+                <div className="text-center min-w-0 px-2">
+                  <h2 className="text-sm sm:text-lg font-black text-[#191820] uppercase tracking-tight truncate">
+                    Choose Your Mascot
+                  </h2>
+                  <p className="text-[11px] text-[#6B6A78] truncate">
+                    Playing as <strong className="text-[#6C5CE7] font-bold">{displayName}</strong>
+                  </p>
+                </div>
+
+                <div className="px-2.5 py-1 rounded-full bg-[#E9E5FF] text-[#6C5CE7] text-[10px] font-mono font-bold tracking-wider shrink-0">
+                  {code}
+                </div>
+              </div>
+
+              {/* Main Selection Area: 2-Column on Desktop (md:), Stacked on Mobile */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-start">
+                {/* Desktop Left / Mobile Bottom Carousel: 8 Mascot Selector */}
+                <div className="order-2 md:order-1 md:col-span-5 flex flex-col">
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <span className="text-[11px] font-black text-[#6B6A78] uppercase tracking-wider">
+                      SELECT SQUAD MASCOT
+                    </span>
+                    <span className="text-[10px] font-bold text-[#6C5CE7]">
+                      8 Available
+                    </span>
+                  </div>
+
+                  {/* Desktop: Clean 2-column grid showing all 8 mascots; Mobile: Horizontal smooth swipe */}
+                  <div className="flex md:grid md:grid-cols-2 gap-2 sm:gap-2.5 overflow-x-auto md:overflow-visible py-2 px-1 snap-x scrollbar-thin">
+                    {MASCOTS.map((m) => {
+                      const isSelected = selectedAvatarId === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setSelectedAvatarId(m.id)}
+                          className={`snap-center shrink-0 w-24 sm:w-28 md:w-auto p-2 sm:p-2.5 rounded-2xl border text-center transition-all duration-200 flex flex-col items-center justify-center relative active:scale-95 ${
+                            isSelected
+                              ? "bg-white border-[#6C5CE7] ring-2 ring-[#6C5CE7] shadow-md shadow-purple-500/15 -translate-y-0.5"
+                              : "bg-[#F7F6F2] hover:bg-white border-[#EAE7F2] hover:border-[#DDD6FE]"
+                          }`}
+                        >
+                          {/* Top-Right Checkmark Badge */}
+                          {isSelected && (
+                            <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center shadow-sm z-10">
+                              <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            </div>
+                          )}
+
+                          <PlayerAvatar
+                            avatarId={m.id}
+                            size="md"
+                            className="mb-1"
+                          />
+                          <p className="text-[11px] font-black text-[#191820] leading-tight truncate w-full px-0.5">
+                            {m.name}
+                          </p>
+                          <span
+                            className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md mt-1 truncate max-w-full leading-none"
+                            style={{
+                              backgroundColor: m.badgeBg,
+                              color: m.accentColor,
+                            }}
+                          >
+                            {m.personality}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Desktop Right / Mobile Top: Center Mascot Showcase */}
+                <div className="order-1 md:order-2 md:col-span-7 flex flex-col">
+                  <div className="relative w-full rounded-3xl bg-gradient-to-b from-[#F7F6F2] via-white to-[#F7F6F2] border border-[#EAE7F2] p-4 sm:p-6 flex flex-col items-center justify-center min-h-[250px] sm:min-h-[290px] overflow-hidden shadow-inner">
+                    {/* Background Aura */}
+                    <div
+                      className="absolute w-44 h-44 sm:w-56 sm:h-56 rounded-full blur-2xl opacity-20 pointer-events-none transition-colors duration-500"
+                      style={{
+                        backgroundColor: activeMascot ? activeMascot.accentColor : "#6C5CE7",
+                      }}
+                    />
+
+                    {activeMascot ? (
+                      <div className="relative z-10 flex flex-col items-center w-full animate-fade-in text-center">
+                        {/* 3D Mascot Image with defined max height to strictly prevent text overlap */}
+                        <div className="h-36 sm:h-44 md:h-48 w-full flex items-center justify-center mb-1 shrink-0 drop-shadow-lg">
+                          <PlayerAvatar
+                            avatarId={activeMascot.id}
+                            size="preview"
+                            animation="float"
+                            className="max-h-full w-auto object-contain"
+                          />
+                        </div>
+
+                        {/* Character Metadata - Cleanly separated below image */}
+                        <h3 className="text-base sm:text-xl font-black text-[#191820] uppercase tracking-tight mt-1">
+                          {activeMascot.name}
+                        </h3>
+
+                        <div
+                          className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider mt-1 shadow-sm"
+                          style={{
+                            backgroundColor: activeMascot.badgeBg,
+                            color: activeMascot.accentColor,
+                          }}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                          <span>{activeMascot.personality}</span>
+                        </div>
+
+                        <p className="text-xs sm:text-sm text-[#6B6A78] italic font-medium mt-1.5 max-w-sm px-2">
+                          &ldquo;{activeMascot.description}&rdquo;
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="relative z-10 flex flex-col items-center justify-center py-8 text-center text-[#6B6A78] space-y-2">
+                        <div className="w-16 h-16 rounded-3xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center border-2 border-dashed border-[#DDD6FE] animate-pulse">
+                          <Smile className="w-8 h-8 opacity-50" />
+                        </div>
+                        <p className="text-sm font-black text-[#191820]">Tap a Mascot to Choose</p>
+                        <p className="text-xs text-[#A09EB1] max-w-xs">
+                          Pick any of the 8 Wager Squad mascots to represent your visual identity.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Join Arena Button */}
+                  <div className="mt-3 sm:mt-4">
+                    <button
+                      type="button"
+                      onClick={handleJoinGame}
+                      disabled={loading || !selectedAvatarId}
+                      className="w-full h-[52px] sm:h-[56px] rounded-2xl bg-[#FF7417] hover:bg-[#e6640e] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
+                    >
+                      {loading ? (
+                        <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : activeMascot ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>JOIN AS {activeMascot.name.toUpperCase()}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      ) : (
+                        <span>SELECT A MASCOT TO JOIN</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Official Platform Rules (Footer reference) */}
+        <div className="mt-8 sm:mt-12 max-w-3xl mx-auto w-full">
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-4">
             <div className="h-[1px] bg-[#DDD6FE] flex-1 max-w-[80px] sm:max-w-xs" />
             <h3 className="text-xs font-black uppercase tracking-wider text-[#6C5CE7] text-center">
               OFFICIAL PLATFORM RULES
