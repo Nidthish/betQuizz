@@ -43,7 +43,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  outputFileTracingRoot: path.resolve(__dirname),
+  serverExternalPackages: ["@prisma/client"],
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./node_modules/.prisma/client/**/*"],
+  },
   async headers() {
     return [
       {
