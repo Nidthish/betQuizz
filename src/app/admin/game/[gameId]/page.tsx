@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use, useMemo, useRef } from "react";
+import React, { useState, useEffect, use, useMemo, useRef } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/common/Navbar";
 import { PlayerAvatar } from "@/components/common/PlayerAvatar";
@@ -32,6 +32,10 @@ import {
   Upload,
   AlertTriangle,
   ArrowLeft,
+  HelpCircle,
+  Maximize2,
+  Minimize,
+  Tv,
 } from "lucide-react";
 
 const SAMPLE_QUESTIONS_TEMPLATE = {
@@ -96,6 +100,46 @@ export default function AdminGameControlPage({
     snapshot?.questionEndsAt ?? null
   );
 
+  // View Tab State ("questions" | "leaderboard")
+  const [activeViewTab, setActiveViewTab] = useState<"questions" | "leaderboard">("questions");
+  const [projectorDisplayMode, setProjectorDisplayMode] = useState<"both" | "podium" | "table">("both");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "leaderboard" || params.get("view") === "leaderboard") {
+        setActiveViewTab("leaderboard");
+      }
+    }
+  }, []);
+
+  const handleSwitchTab = (tab: "questions" | "leaderboard") => {
+    setActiveViewTab(tab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (typeof document === "undefined") return;
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
   // Modal State
   const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
@@ -109,7 +153,7 @@ export default function AdminGameControlPage({
   const [optionsStr, setOptionsStr] = useState("Paris, Berlin, Rome, Madrid");
   const [correctAnswer, setCorrectAnswer] = useState("Paris");
   const [explanation, setExplanation] = useState("");
-  const [countdownSeconds, setCountdownSeconds] = useState(30);
+  const [countdownSeconds, setCountdownSeconds] = useState<number | string>(30);
   const [submittingSingle, setSubmittingSingle] = useState(false);
 
   // Bulk JSON Form State
@@ -221,7 +265,7 @@ export default function AdminGameControlPage({
           questionText: questionText.trim(),
           options: opts,
           correctAnswer: correctAnswer.trim(),
-          countdownSeconds,
+          countdownSeconds: Number(countdownSeconds) || 30,
           explanation: explanation.trim() || undefined,
         }),
       });
@@ -516,6 +560,254 @@ export default function AdminGameControlPage({
           </div>
         )}
 
+
+        {/* Tab Switcher: Questions & Host View vs. Projector Leaderboard */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 my-5 p-2 rounded-2xl bg-white border border-[#EAE7F2] shadow-sm">
+          <div className="flex items-center gap-1.5 p-1 bg-[#F7F6F2] rounded-xl border border-[#EAE7F2] w-full sm:w-auto">
+            <button
+              onClick={() => handleSwitchTab("questions")}
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                activeViewTab === "questions"
+                  ? "bg-[#6C5CE7] text-white shadow-sm"
+                  : "text-[#6B6A78] hover:text-[#191820] hover:bg-white"
+              }`}
+            >
+              <HelpCircle className="w-4 h-4 shrink-0" />
+              <span>Question & Host Controls</span>
+            </button>
+            <button
+              onClick={() => handleSwitchTab("leaderboard")}
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                activeViewTab === "leaderboard"
+                  ? "bg-[#6C5CE7] text-white shadow-sm"
+                  : "text-[#6B6A78] hover:text-[#191820] hover:bg-white"
+              }`}
+            >
+              <Trophy className="w-4 h-4 text-[#FFC72C] shrink-0" />
+              <span>Projector Leaderboard</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 justify-end">
+            {activeViewTab === "leaderboard" && (
+              <button
+                onClick={toggleFullscreen}
+                className="h-9 px-3.5 rounded-xl bg-[#F0EEFF] hover:bg-[#E9E5FF] border border-[#DDD6FE] text-[#6C5CE7] text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                title="Toggle Fullscreen on Projector"
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize className="w-3.5 h-3.5 shrink-0" />
+                    <span>Exit Fullscreen</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Fullscreen</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            <a
+              href={`/admin/game/${snapshot.gameId}?tab=leaderboard`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-9 px-3.5 rounded-xl bg-[#6C5CE7] hover:bg-[#5b4cdb] text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+              title="Open Projector Leaderboard in a separate tab or screen"
+            >
+              <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+              <span>Open Projector Tab ↗</span>
+            </a>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* TAB 2: PROJECTOR LEADERBOARD VIEW (SAFE FOR PROJECTOR - NO ANSWERS SHOWN) */}
+        {/* ========================================================================= */}
+        {activeViewTab === "leaderboard" && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Projector Header Bar */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-[#6C5CE7] text-white flex items-center justify-center shadow-lg shadow-[#6C5CE7]/20 shrink-0">
+                  <Trophy className="w-6 h-6 text-[#FFC72C]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#6B6A78]">ROOM CODE</span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#22B978]/10 text-[#22B978] text-[9px] font-black uppercase tracking-wider">
+                      PROJECTOR SAFE
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-3 mt-0.5">
+                    <span className="font-mono text-2xl sm:text-3xl font-black text-[#FF7417] tracking-wider">
+                      {snapshot.gameCode}
+                    </span>
+                    <span className="text-xs text-[#6B6A78] font-bold">
+                      {snapshot.title}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status & Live Countdown */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto justify-start md:justify-end">
+                <span className="px-3.5 py-1.5 rounded-full bg-[#6C5CE7] text-white text-xs font-black uppercase tracking-wider font-mono">
+                  ROUND {snapshot.currentQuestionIndex} / {snapshot.totalQuestions}
+                </span>
+
+                {isLive && (
+                  <div className="px-3.5 py-1.5 rounded-full bg-[#FFF3E8] border border-[#FFD9BE] text-[#FF7417] font-mono text-sm font-black flex items-center gap-2 animate-pulse shadow-sm">
+                    <Timer className="w-4 h-4 text-[#FF7417]" />
+                    <span>{formatCountdown(secondsRemaining)}</span>
+                  </div>
+                )}
+
+                <span className="px-3.5 py-1.5 rounded-full bg-[#F0EEFF] text-[#6C5CE7] text-xs font-black uppercase tracking-wider font-mono">
+                  {isLive ? "QUESTION IN PROGRESS" : isFinished ? "TOURNAMENT FINISHED" : isLobby ? "LOBBY" : snapshot.status.replace("_", " ")}
+                </span>
+
+                <span className="px-3 py-1.5 rounded-full bg-white border border-[#EAE7F2] text-[#6B6A78] text-xs font-mono font-bold">
+                  {snapshot.totalPlayers} Players
+                </span>
+              </div>
+            </div>
+
+            {/* Main Stage: Podium & Leaderboard */}
+            {snapshot.leaderboard.length === 0 ? (
+              <div className="py-20 text-center rounded-3xl bg-white border border-[#EAE7F2] shadow-sm">
+                <div className="w-16 h-16 rounded-3xl bg-[#F0EEFF] text-[#6C5CE7] flex items-center justify-center mx-auto mb-4 shadow-inner">
+                  <Trophy className="w-8 h-8 text-[#6C5CE7]" />
+                </div>
+                <h3 className="text-xl font-black text-[#191820]">
+                  Tournament Lobby
+                </h3>
+                <p className="text-sm text-[#6B6A78] mt-1 mb-6">
+                  Join with room code <strong className="font-mono text-[#FF7417] text-lg font-black">{snapshot.gameCode}</strong> to enter the tournament!
+                </p>
+                <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#F7F6F2] border border-[#EAE7F2] text-xs font-mono text-[#6B6A78]">
+                  <Users className="w-4 h-4 text-[#6C5CE7]" />
+                  <span>Waiting for players to connect...</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Projector Sub-Mode Switcher */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-[#EAE7F2] shadow-sm">
+                    <button
+                      onClick={() => setProjectorDisplayMode("both")}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                        projectorDisplayMode === "both"
+                          ? "bg-[#6C5CE7] text-white shadow-sm"
+                          : "text-[#6B6A78] hover:text-[#191820]"
+                      }`}
+                    >
+                      ✨ Both (Podium + Table)
+                    </button>
+                    <button
+                      onClick={() => setProjectorDisplayMode("podium")}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                        projectorDisplayMode === "podium"
+                          ? "bg-[#6C5CE7] text-white shadow-sm"
+                          : "text-[#6B6A78] hover:text-[#191820]"
+                      }`}
+                    >
+                      🏆 3D Podium
+                    </button>
+                    <button
+                      onClick={() => setProjectorDisplayMode("table")}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                        projectorDisplayMode === "table"
+                          ? "bg-[#6C5CE7] text-white shadow-sm"
+                          : "text-[#6B6A78] hover:text-[#191820]"
+                      }`}
+                    >
+                      📊 Standings Table
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-[#6B6A78] font-bold">
+                    {snapshot.leaderboard.length} {snapshot.leaderboard.length === 1 ? "player" : "players"} ranked
+                  </span>
+                </div>
+
+                {/* 3D Podium View */}
+                {(projectorDisplayMode === "both" || projectorDisplayMode === "podium") && (
+                  <PodiumLeaderboard
+                    leaderboard={snapshot.leaderboard}
+                    title={isFinished ? "Tournament Champions" : "Live Tournament Standings"}
+                    disableConfetti={!isFinished}
+                  />
+                )}
+
+                {/* Live Standings Table (Matching Exactly the Host Standings Card) */}
+                {(projectorDisplayMode === "both" || projectorDisplayMode === "table") && (
+                  <div className="p-6 sm:p-7 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm animate-fade-in">
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-[#6C5CE7]" />
+                        <h3 className="text-sm font-black uppercase tracking-wider text-[#191820]">
+                          LIVE STANDINGS ({snapshot.leaderboard.length} PLAYERS)
+                        </h3>
+                      </div>
+                      <span className="text-xs font-bold text-[#22B978] bg-[#EAF9F2] px-3 py-1 rounded-full border border-[#A7F3D0]">
+                        Real-time synced
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs sm:text-sm">
+                        <thead>
+                          <tr className="bg-[#F0EEFF] text-[#6C5CE7] uppercase tracking-wider font-extrabold rounded-xl text-xs">
+                            <th className="py-3.5 px-4 rounded-l-xl">RANK</th>
+                            <th className="py-3.5 px-4">PLAYER</th>
+                            <th className="py-3.5 px-4">BALANCE</th>
+                            <th className="py-3.5 px-4">CORRECT / WRONG</th>
+                            <th className="py-3.5 px-4">REFILLS</th>
+                            <th className="py-3.5 px-4 rounded-r-xl">NET SCORE</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#EAE7F2] font-semibold">
+                          {snapshot.leaderboard.map((p) => (
+                            <tr key={p.gamePlayerId} className="hover:bg-[#F7F6F2] text-[#191820] transition-colors">
+                              <td className="py-3.5 px-4 font-mono font-black text-[#6C5CE7]">#{p.rank}</td>
+                              <td className="py-3.5 px-4 font-bold text-[#191820]">
+                                <div className="flex items-center gap-2.5">
+                                  <PlayerAvatar avatarId={p.avatarId} size="xs" />
+                                  <span className="truncate">{p.displayName}</span>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4 font-mono text-[#FF7417] font-black text-sm">
+                                ₹{formatPoints(p.balance)}
+                              </td>
+                              <td className="py-3.5 px-4 font-mono">
+                                <span className="text-[#22B978] font-bold">{p.totalCorrect}</span> /{" "}
+                                <span className="text-[#EF5350] font-bold">{p.totalWrong}</span>
+                              </td>
+                              <td className="py-3.5 px-4 text-[#6B6A78] font-mono">
+                                {p.refillCount}
+                              </td>
+                              <td className="py-3.5 px-4 font-mono font-black text-[#22B978] text-sm">
+                                ₹{formatPoints(p.netScore)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 1: QUESTION & HOST CONTROLS VIEW (FOR HOST - SHOWS ANSWERS & DETAILS) */}
+        {/* ========================================================================= */}
+        {activeViewTab === "questions" && (
+          <div className="space-y-6">
         {/* 4 Metric Cards Strip (Responsive, no text cutoff) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 my-5 sm:my-6">
           {/* Card 1: Game Status */}
@@ -740,11 +1032,20 @@ export default function AdminGameControlPage({
 
         {/* Live Standings Table (Matching Screenshots 12 & 14) */}
         <div className="p-6 sm:p-7 rounded-3xl bg-white border border-[#EAE7F2] shadow-sm">
-          <div className="flex items-center gap-2 mb-5">
-            <Trophy className="w-5 h-5 text-[#6C5CE7]" />
-            <h3 className="text-sm font-black uppercase tracking-wider text-[#191820]">
-              LIVE STANDINGS ({snapshot.leaderboard.length} PLAYERS)
-            </h3>
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-[#6C5CE7]" />
+              <h3 className="text-sm font-black uppercase tracking-wider text-[#191820]">
+                LIVE STANDINGS ({snapshot.leaderboard.length} PLAYERS)
+              </h3>
+            </div>
+            <button
+              onClick={() => handleSwitchTab("leaderboard")}
+              className="text-xs font-bold text-[#6C5CE7] hover:underline flex items-center gap-1"
+            >
+              <span>View 3D Podium</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -796,6 +1097,8 @@ export default function AdminGameControlPage({
             </table>
           </div>
         </div>
+          </div>
+        )}
       </main>
 
       {/* Add Question Modal (Matching Screenshot 15) */}
@@ -1005,7 +1308,7 @@ export default function AdminGameControlPage({
                       value={countdownSeconds}
                       min={5}
                       max={180}
-                      onChange={(e) => setCountdownSeconds(parseInt(e.target.value, 10))}
+                      onChange={(e) => setCountdownSeconds(e.target.value === "" ? "" : Number(e.target.value))}
                       className="w-full h-11 px-4 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] font-mono text-xs font-bold text-[#191820] outline-none focus:border-[#6C5CE7]"
                     />
                   </div>

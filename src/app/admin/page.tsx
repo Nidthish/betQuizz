@@ -40,9 +40,9 @@ export default function AdminMultiGameDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [startingBalance, setStartingBalance] = useState(10000);
-  const [refillAmount, setRefillAmount] = useState(10000);
-  const [refillFee, setRefillFee] = useState(1000);
+  const [startingBalance, setStartingBalance] = useState<number | string>(10000);
+  const [refillAmount, setRefillAmount] = useState<number | string>(10000);
+  const [refillFee, setRefillFee] = useState<number | string>(1000);
 
   const fetchGames = async () => {
     try {
@@ -100,9 +100,9 @@ export default function AdminMultiGameDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: newTitle.trim(),
-          startingBalance,
-          refillAmount,
-          refillFee,
+          startingBalance: Number(startingBalance) || 10000,
+          refillAmount: Number(refillAmount) || 10000,
+          refillFee: Number(refillFee) || 0,
         }),
       });
 
@@ -329,7 +329,7 @@ export default function AdminMultiGameDashboard() {
                   <input
                     type="number"
                     value={startingBalance}
-                    onChange={(e) => setStartingBalance(parseInt(e.target.value, 10))}
+                    onChange={(e) => setStartingBalance(e.target.value === "" ? "" : Number(e.target.value))}
                     className="w-full h-11 px-3 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] font-mono text-sm font-black text-[#FF7417] outline-none text-center"
                   />
                 </div>
@@ -340,7 +340,7 @@ export default function AdminMultiGameDashboard() {
                   <input
                     type="number"
                     value={refillAmount}
-                    onChange={(e) => setRefillAmount(parseInt(e.target.value, 10))}
+                    onChange={(e) => setRefillAmount(e.target.value === "" ? "" : Number(e.target.value))}
                     className="w-full h-11 px-3 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] font-mono text-sm font-black text-[#FF7417] outline-none text-center"
                   />
                 </div>
@@ -351,7 +351,7 @@ export default function AdminMultiGameDashboard() {
                   <input
                     type="number"
                     value={refillFee}
-                    onChange={(e) => setRefillFee(parseInt(e.target.value, 10))}
+                    onChange={(e) => setRefillFee(e.target.value === "" ? "" : Number(e.target.value))}
                     className="w-full h-11 px-3 rounded-2xl bg-[#F4F1FF] border border-[#DDD6FE] font-mono text-sm font-black text-[#FF7417] outline-none text-center"
                   />
                 </div>

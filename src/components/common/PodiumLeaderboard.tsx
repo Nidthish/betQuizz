@@ -24,6 +24,7 @@ interface PodiumLeaderboardProps {
   title?: string;
   onViewStats?: () => void;
   showBackToStats?: boolean;
+  disableConfetti?: boolean;
 }
 
 export function PodiumLeaderboard({
@@ -32,17 +33,19 @@ export function PodiumLeaderboard({
   title = "Final Results",
   onViewStats,
   showBackToStats = false,
+  disableConfetti = false,
 }: PodiumLeaderboardProps) {
   const [showAllInTable, setShowAllInTable] = useState(false);
 
   // Trigger celebratory confetti on initial mount of the podium
   useEffect(() => {
+    if (disableConfetti) return;
     try {
       triggerWinConfetti();
     } catch {
       // safe fallback
     }
-  }, []);
+  }, [disableConfetti]);
 
   // Top 3 players for podium
   const firstPlace = leaderboard.find((p) => p.rank === 1);
@@ -291,14 +294,6 @@ export function PodiumLeaderboard({
               </div>
             ) : (
               <div className="w-full h-16 rounded-t-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/30 text-xs">
-                Empty
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-            ) : (
-              <div className="w-full h-20 rounded-t-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/30 text-xs">
                 Empty
               </div>
             )}

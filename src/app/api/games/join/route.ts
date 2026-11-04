@@ -141,6 +141,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (!gamePlayer) {
+      return NextResponse.json(
+        { success: false, message: "Failed to join game", requestId },
+        { status: 500 }
+      );
+    }
+
     // Update player's session cookie with this game participation
     const participations = session?.gameParticipations ?? {};
     participations[game.id] = gamePlayer.id;
